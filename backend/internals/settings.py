@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from dataclasses import _MISSING_TYPE, asdict, dataclass, field
+from functools import lru_cache
 from json import dump, load
 from logging import INFO
 from os import urandom
@@ -18,7 +19,7 @@ from backend.base.helpers import (CommaList, Singleton, force_suffix,
                                   get_python_version, normalize_base_url,
                                   reversed_tuples)
 from backend.base.logging import LOGGER, set_log_level
-from backend.internals.db import commit, get_db
+from backend.internals.db import DBConnection, commit, get_db
 from backend.internals.db_migration import get_latest_db_version
 
 
@@ -73,13 +74,31 @@ class SettingsValues:
         }
 
 
-about_data = {
-    'version': 'v1.2.0',
-    'python_version': get_python_version(),
-    'database_version': get_latest_db_version(),
-    'database_location': None, # Get's filled in by db.set_db_location()
-    'data_folder': folder_path()
-}
+@lru_cache(1)
+def get_about_data() -> Dict[str, Any]:
+    """Get data about the application and it's environment.
+
+    Raises:
+        RuntimeError: If the version is not found in the pyproject.toml file.
+
+    Returns:
+        Dict[str, Any]: The information.
+    """
+    with open(folder_path("pyproject.toml"), "r") as f:
+        for line in f:
+            if line.startswith("version = "):
+                version = "v" + line.split('"')[1]
+                break
+        else:
+            raise RuntimeError("Version not found in pyproject.toml")
+
+    return {
+        "version": version,
+        "python_version": get_python_version(),
+        "database_version": get_latest_db_version(),
+        "database_location": DBConnection.file,
+        "data_folder": folder_path()
+    }
 
 
 task_intervals = {

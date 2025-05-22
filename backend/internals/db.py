@@ -17,6 +17,7 @@ from flask import g
 
 from backend.base.definitions import (Constants, SeedingHandling,
                                       SpecialVersion, T)
+from backend.base.files import create_folder, folder_path
 from backend.base.helpers import CommaList
 from backend.base.logging import LOGGER, set_log_level
 from backend.internals.db_migration import migrate_db
@@ -163,9 +164,6 @@ def set_db_location(
     Raises:
         ValueError: Value of `db_folder` exists but is not a folder.
     """
-    from backend.base.files import create_folder, folder_path
-    from backend.internals.settings import about_data
-
     if db_folder:
         if exists(db_folder) and not isdir(db_folder):
             raise ValueError('Database location is not a folder')
@@ -179,7 +177,7 @@ def set_db_location(
 
     create_folder(dirname(db_file_location))
 
-    DBConnection.file = about_data['database_location'] = db_file_location
+    DBConnection.file = db_file_location
 
     return
 
