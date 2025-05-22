@@ -151,7 +151,13 @@ class extract_filename_data(unittest.TestCase):
                 {'series': 'Kid Colt', 'year': 2022, 'volume_number': 5, 'special_version': None, 'issue_number': 8.0, 'annual': False},
 
             'Batman & Robin 2권 Issues#5-8a + Annuals (2000-2005).cbr':
-                {'series': 'Batman & Robin', 'year': 2000, 'volume_number': 2, 'special_version': None, 'issue_number': (5.0, 8.01), 'annual': False}
+                {'series': 'Batman & Robin', 'year': 2000, 'volume_number': 2, 'special_version': None, 'issue_number': (5.0, 8.01), 'annual': False},
+
+            'Iron-Man (1993) T3':
+                {'series': 'Iron Man', 'year': 1993, 'volume_number': 1, 'special_version': None, 'issue_number': 3.0, 'annual': False},
+
+            'Iron-Man (1993) Tome 4':
+                {'series': 'Iron Man', 'year': 1993, 'volume_number': 1, 'special_version': None, 'issue_number': 4.0, 'annual': False},
         }
         self.run_cases(cases)
 
