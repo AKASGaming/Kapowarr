@@ -497,30 +497,30 @@ class DownloadHandler(metaclass=Singleton):
 
         for download in iter_commit(downloads):
             LOGGER.debug(f'Download from database: {dict(download)}')
-            try:
-                if download['covered_issues'] is None:
-                    covered_issues = None
+            if download['covered_issues'] is None:
+                covered_issues = None
 
-                elif ',' in download['covered_issues']:
-                    covered_issues = (
-                        float(download['covered_issues'].split(',')[0]),
-                        float(download['covered_issues'].split(',')[1])
+            elif ',' in download['covered_issues']:
+                covered_issues = (
+                    float(download['covered_issues'].split(',')[0]),
+                    float(download['covered_issues'].split(',')[1])
+                )
+
+            else:
+                covered_issues = float(download['covered_issues'])
+
+            kwargs = {}
+            if issubclass(
+                download_type_to_class[download['client_type']],
+                ExternalDownload
+            ):
+                kwargs = {
+                    'external_client': ExternalClients.get_client(
+                        download['external_client_id']
                     )
+                }
 
-                else:
-                    covered_issues = float(download['covered_issues'])
-
-                kwargs = {}
-                if issubclass(
-                    download_type_to_class[download['client_type']],
-                    ExternalDownload
-                ):
-                    kwargs = {
-                        'external_client': ExternalClients.get_client(
-                            download['external_client_id']
-                        )
-                    }
-
+            try:
                 dl_instance = download_type_to_class[download['client_type']](
                     download_link=download['download_link'],
                     volume_id=download['volume_id'],
@@ -539,13 +539,10 @@ class DownloadHandler(metaclass=Singleton):
                 # Link is broken
 
                 issue_id = None
-                if (
-                    download['covered_issues']
-                    and ',' not in download['covered_issues']
-                ):
+                if isinstance(covered_issues, float):
                     issue_id = Issue.from_volume_and_calc_number(
                         download['volume_id'],
-                        float(download['covered_issues'])
+                        covered_issues
                     ).id
 
                 add_to_blocklist(
@@ -564,10 +561,11 @@ class DownloadHandler(metaclass=Singleton):
                 )
                 continue
 
-            except DownloadLimitReached:
-                continue
-
-            except IssueNotFound:
+            except (DownloadLimitReached, IssueNotFound):
+                cursor.execute(
+                    "DELETE FROM download_queue WHERE id = ?;",
+                    (download['id'],)
+                )
                 continue
 
             self.queue += self.__prepare_downloads_for_queue(
