@@ -238,7 +238,10 @@ class extract_filename_data(unittest.TestCase):
                 {'series': 'Undiscovered Country', 'year': None, 'volume_number': 2, 'special_version': 'cover', 'issue_number': 3.0, 'annual': False},
 
             'Iron-Man (1980) Volume 2 One-Shot Cover':
-                {'series': 'Iron Man', 'year': 1980, 'volume_number': 2, 'special_version': 'cover', 'issue_number': None, 'annual': False}
+                {'series': 'Iron Man', 'year': 1980, 'volume_number': 2, 'special_version': 'cover', 'issue_number': None, 'annual': False},
+
+            'Iron-Man (1980) Volume 2/folder.jpg':
+                {'series': 'Iron Man', 'year': 1980, 'volume_number': 2, 'special_version': 'cover', 'issue_number': None, 'annual': False},
         }
         self.run_cases(cases)
 
