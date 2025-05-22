@@ -65,8 +65,12 @@ class Constants:
     FS_API_BASE = "/v1"
     CF_CHALLENGE_HEADER = ("cf-mitigated", "challenge")
 
-    TORRENT_UPDATE_INTERVAL = 5 # seconds
-    TORRENT_TAG = "kapowarr"
+    DCPP_URL_PREFIX = "dcpp://"
+    DCPP_SEARCH_TIMEOUT = 10 # seconds
+    DCPP_SEARCH_PRIORITY = 5 # "High"
+
+    EXTERNAL_CLIENT_UPDATE_INTERVAL = 5 # seconds
+    EXTERNAL_CLIENT_DOWNLOAD_TAG = "kapowarr"
 
 
 class FileConstants:
@@ -257,10 +261,11 @@ class SocketEvent(BaseEnum):
 
 
 class FailReason(BaseEnum):
-    BROKEN = 'GetComics page unavailable'
+    BROKEN = 'Link is unavailable or broken'
     NO_WORKING_LINKS = 'No working download links on page'
     LIMIT_REACHED = 'Download limit reached for service'
     NO_MATCHES = 'No links found that match to volume and are not blocklisted'
+    EXTERNAL_CLIENT_NOT_FOUND = 'External client not found'
 
 
 class GeneralFileType(BaseEnum):
@@ -275,7 +280,6 @@ class GCDownloadSource(BaseEnum):
     PIXELDRAIN = 'Pixeldrain'
     GETCOMICS = 'GetComics'
     GETCOMICS_TORRENT = 'GetComics (torrent)'
-    AIRDCPP = 'airdcpp'
 
 
 download_source_versions: Dict[GCDownloadSource, Tuple[str, ...]] = dict((
@@ -298,11 +302,8 @@ service on the GC page.
 """
 
 
-# Future proofing. In the future, there'll be sources like 'torrent' and
-# 'usenet'. In part of the code, we want access to all download sources,
-# and in the other part we only want the GC services. So in preparation
-# of the torrent and usenet sources coming, we're already making the
-# distinction here.
+# All download sources, while GCDownloadSource is only the ones
+# that GetComics offers.
 class DownloadSource(BaseEnum):
     MEGA = 'Mega'
     MEDIAFIRE = 'MediaFire'
@@ -310,7 +311,7 @@ class DownloadSource(BaseEnum):
     PIXELDRAIN = 'Pixeldrain'
     GETCOMICS = 'GetComics'
     GETCOMICS_TORRENT = 'GetComics (torrent)'
-    AIRDCPP = "airdcpp"
+    DCPP = 'DC++'
 
 
 class MonitorScheme(BaseEnum):
@@ -322,13 +323,12 @@ class MonitorScheme(BaseEnum):
 class CredentialSource(BaseEnum):
     MEGA = "mega"
     PIXELDRAIN = "pixeldrain"
-    # Add the new AirDC++ credential source
-    AIRDCPP = "airdcpp"
 
 
 class DownloadType(BaseEnum):
     DIRECT = 1
     TORRENT = 2
+    DCPP = 3
 
 
 query_formats: Dict[str, Tuple[str, ...]] = {
@@ -372,13 +372,13 @@ class FilenameData(TypedDict):
 
 
 class SearchResultData(FilenameData):
+    download_type: int
     link: str
-    title: str  # Added this field (can replace display_title)
-    display_title: str  # Keep this for backward compatibility
+    display_title: str
     source: str
-    size: int    
-    seeders: int
-    details: str
+    size: Union[int, None]
+    seeders: Union[int, None]
+    leechers: Union[int, None]
 
 
 class SearchResultMatchData(TypedDict):
@@ -621,12 +621,6 @@ class FileConverter(ABC):
 
 
 class SearchSource(ABC):
-    _subclasses = set()
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        cls._subclasses.add(cls)
-
     def __init__(self, query: str) -> None:
         """Prepare the search source.
 
@@ -635,6 +629,18 @@ class SearchSource(ABC):
         """
         self.query = query
         return
+
+    @abstractmethod
+    async def is_setup_and_available(self, session: AsyncSession) -> bool:
+        """Check if the search source is set up and available.
+
+        Args:
+            session (AsyncSession): The session to use for the check.
+
+        Returns:
+            bool: Whether the search source is set up and available.
+        """
+        ...
 
     @abstractmethod
     async def search(self, session: AsyncSession) -> List[SearchResultData]:
@@ -736,6 +742,15 @@ class ExternalDownloadClient(ABC):
         ...
 
     @abstractmethod
+    def login(self) -> None:
+        """Log in to the client.
+
+        Raises:
+            ExternalClientNotWorking: Can't connect to client.
+        """
+        ...
+
+    @abstractmethod
     def add_download(
         self,
         download_link: str,
@@ -752,6 +767,7 @@ class ExternalDownloadClient(ABC):
 
         Raises:
             ExternalClientNotWorking: Can't connect to client.
+            DownloadLimitReached: The client has reached a download limit.
 
         Returns:
             str: The ID/hash of the entry in the download client.
@@ -1016,7 +1032,9 @@ class Download(ABC):
         Start the download.
 
         Raises:
-            DownloadLimitReached: The source that is downloaded from has reached a rate limit.
+            ExternalClientNotWorking: Can't connect to client.
+            DownloadLimitReached: The client or download source has reached a
+            download limit.
         """
         ...
 

@@ -688,8 +688,7 @@ class MigrateServicePreferenceToEnumValues(DBMigrator):
             'wetransfer': GCDownloadSource.WETRANSFER.value,
             'pixeldrain': GCDownloadSource.PIXELDRAIN.value,
             'getcomics': GCDownloadSource.GETCOMICS.value,
-            'getcomics (torrent)': GCDownloadSource.GETCOMICS_TORRENT.value,
-            'airdcpp': GCDownloadSource.AIRDCPP.value  # New client
+            'getcomics (torrent)': GCDownloadSource.GETCOMICS_TORRENT.value
         }
 
         new_service_preference = CommaList((
@@ -703,6 +702,7 @@ class MigrateServicePreferenceToEnumValues(DBMigrator):
         )
 
         return
+
 
 class MigrateAddLinksInBlocklist(DBMigrator):
     start_version = 24

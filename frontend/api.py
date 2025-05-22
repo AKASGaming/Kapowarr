@@ -5,6 +5,7 @@ from datetime import datetime
 from io import BytesIO, StringIO
 from os.path import dirname, exists
 from typing import Any, Dict, List, Tuple, Type, Union
+from urllib.parse import unquote_plus
 
 from flask import Blueprint, request, send_file
 
@@ -819,11 +820,10 @@ def api_convert_issue(id: int):
     result = preview_mass_convert(volume_id, id)
     return return_api(result)
 
+
 # =====================
 # Manual search + Download
 # =====================
-
-
 @api.route('/volumes/<int:id>/manualsearch', methods=['GET'])
 @error_handler
 @auth
@@ -838,7 +838,7 @@ def api_volume_manual_search(id: int):
 @auth
 def api_volume_download(id: int):
     library.get_volume(id)
-    link: str = extract_key(request, 'link')
+    link: str = unquote_plus(extract_key(request, 'link'))
     force_match: bool = extract_key(request, 'force_match')
     result = run(DownloadHandler().add(link, id, force_match=force_match))
     return return_api(
@@ -867,7 +867,7 @@ def api_issue_manual_search(id: int):
 @auth
 def api_issue_download(id: int):
     volume_id = library.get_issue(id).get_data().volume_id
-    link = extract_key(request, 'link')
+    link: str = unquote_plus(extract_key(request, 'link'))
     force_match: bool = extract_key(request, 'force_match')
     result = run(DownloadHandler().add(
         link, volume_id, id, force_match=force_match
@@ -1155,7 +1155,10 @@ def api_external_clients():
 @auth
 def api_external_clients_keys():
     result = {
-        k: v.required_tokens
+        k: {
+            "tokens": v.required_tokens,
+            "download_type": v.download_type.value
+        }
         for k, v in ExternalClients.get_client_types().items()
     }
     return return_api(result)

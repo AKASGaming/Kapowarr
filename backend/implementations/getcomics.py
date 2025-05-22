@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup, Tag
 from backend.base.custom_exceptions import (DownloadLimitReached, FailedGCPage,
                                             IssueNotFound, LinkBroken)
 from backend.base.definitions import (BlocklistReason, Constants, Download,
-                                      DownloadGroup, FailReason,
+                                      DownloadGroup, DownloadType, FailReason,
                                       GCDownloadSource, SearchResultData,
                                       SpecialVersion, download_source_versions)
 from backend.base.file_extraction import extract_filename_data
@@ -803,9 +803,13 @@ async def search_getcomics(
                 assume_volume_number=False,
                 fix_year=True
             ),
+            "download_type": DownloadType.DIRECT.value,
             "link": article[0],
             "display_title": article[1],
-            "source": Constants.GC_SOURCE_TERM
+            "source": Constants.GC_SOURCE_TERM,
+            "size": None,
+            "seeders": None,
+            "leechers": None
         }
         for soup in (first_soup, *other_soups)
         for article in _get_articles(soup)

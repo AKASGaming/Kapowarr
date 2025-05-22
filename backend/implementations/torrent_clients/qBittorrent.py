@@ -2,7 +2,7 @@
 
 from re import IGNORECASE, compile
 from time import time
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, final
 
 from requests.exceptions import RequestException
 
@@ -16,6 +16,7 @@ from backend.internals.settings import Settings
 filename_magnet_link = compile(r'(?<=&dn=).*?(?=&)', IGNORECASE)
 
 
+@final
 class qBittorrent(BaseExternalClient):
     client_type = 'qBittorrent'
     download_type = DownloadType.TORRENT
@@ -97,6 +98,14 @@ class qBittorrent(BaseExternalClient):
 
         return ssn
 
+    def login(self) -> None:
+        if not self.ssn:
+            result = self._login(self.base_url, self.username, self.password)
+            if isinstance(result, str):
+                raise ExternalClientNotWorking(result)
+            self.ssn = result
+        return
+
     def add_download(
         self,
         download_link: str,
@@ -111,7 +120,7 @@ class qBittorrent(BaseExternalClient):
         files = {
             'urls': (None, download_link),
             'savepath': (None, target_folder),
-            'category': (None, Constants.TORRENT_TAG)
+            'category': (None, Constants.EXTERNAL_CLIENT_DOWNLOAD_TAG)
         }
 
         if not self.ssn:

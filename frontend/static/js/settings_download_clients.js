@@ -1,3 +1,8 @@
+const client_lists = {
+	2: document.querySelector('#torrent-client-list'),
+	3: document.querySelector('#dcpp-client-list'),
+}
+
 function createUsernameInput(id) {
 	const username_row = document.createElement('tr');
 	const username_header = document.createElement('th');
@@ -49,13 +54,13 @@ function createApiTokenInput(id) {
 	return token_row;
 };
 
-function loadEditTorrent(api_key, id) {
-	const form = document.querySelector('#edit-torrent-form tbody');
+function loadEditClient(api_key, id) {
+	const form = document.querySelector('#edit-ext-client-form tbody');
 	form.dataset.id = id;
 	form.querySelectorAll(
 		'tr:not(:has(input#edit-title-input, input#edit-baseurl-input))'
 	).forEach(el => el.remove());
-	document.querySelector('#test-torrent-edit').classList.remove(
+	document.querySelector('#test-ext-client-edit').classList.remove(
 		'show-success', 'show-fail'
 	)
 	hide([document.querySelector('#edit-error')]);
@@ -66,7 +71,7 @@ function loadEditTorrent(api_key, id) {
 		form.dataset.type = client_type;
 		fetchAPI('/externalclients/options', api_key)
 		.then(options => {
-			const client_options = options.result[client_type];
+			const client_options = options.result[client_type].tokens;
 
 			form.querySelector('#edit-title-input').value =
 				client_data.result.title || '';
@@ -95,19 +100,19 @@ function loadEditTorrent(api_key, id) {
 				form.appendChild(token_input);
 			};
 
-			showWindow('edit-torrent-window');
+			showWindow('edit-ext-client-window');
 		});
 	});
 };
 
-function saveEditTorrent() {
+function saveEditClient() {
 	usingApiKey()
 	.then(api_key => {
-		testEditTorrent(api_key).then(result => {
+		testEditClient(api_key).then(result => {
 			if (!result)
 				return;
 
-			const form = document.querySelector('#edit-torrent-form tbody');
+			const form = document.querySelector('#edit-ext-client-form tbody');
 			const id = form.dataset.id;
 			const data = {
 				title: form.querySelector('#edit-title-input').value,
@@ -118,7 +123,7 @@ function saveEditTorrent() {
 			};
 			sendAPI('PUT', `/externalclients/${id}`, api_key, {}, data)
 			.then(response => {
-				loadTorrentClients(api_key);
+				loadExternalClients(api_key);
 				closeWindow();
 			})
 			.catch(e => {
@@ -133,11 +138,11 @@ function saveEditTorrent() {
 	});
 };
 
-async function testEditTorrent(api_key) {
+async function testEditClient(api_key) {
 	const error = document.querySelector('#edit-error');
 	hide([error]);
-	const form = document.querySelector('#edit-torrent-form tbody');
-	const test_button = document.querySelector('#test-torrent-edit');
+	const form = document.querySelector('#edit-ext-client-form tbody');
+	const test_button = document.querySelector('#test-ext-client-edit');
 	test_button.classList.remove('show-success', 'show-fail');
 	const data = {
 		client_type: form.dataset.type,
@@ -162,11 +167,11 @@ async function testEditTorrent(api_key) {
 	});
 };
 
-function deleteTorrent(api_key) {
-	const id = document.querySelector('#edit-torrent-form tbody').dataset.id;
+function deleteClient(api_key) {
+	const id = document.querySelector('#edit-ext-client-form tbody').dataset.id;
 	sendAPI('DELETE', `/externalclients/${id}`, api_key)
 	.then(response => {
-		loadTorrentClients(api_key);
+		loadExternalClients(api_key);
 		closeWindow();
 	})
 	.catch(e => {
@@ -179,29 +184,32 @@ function deleteTorrent(api_key) {
 	});
 };
 
-function loadTorrentList(api_key) {
-	const table = document.querySelector('#choose-torrent-list');
+function loadClientList(api_key, download_type) {
+	const table = document.querySelector('#choose-ext-client-list');
 	table.innerHTML = '';
 
 	fetchAPI('/externalclients/options', api_key)
 	.then(json => {
-		Object.keys(json.result).forEach(c => {
+		for (const [c_name, c_info] of Object.entries(json.result)) {
+			if (c_info.download_type !== download_type)
+				continue;
+
 			const entry = document.createElement('button');
-			entry.innerText = c;
-			entry.onclick = e => loadAddTorrent(api_key, c);
+			entry.innerText = c_name;
+			entry.onclick = e => loadAddClient(api_key, c_name);
 			table.appendChild(entry);
-		});
-		showWindow('choose-torrent-window');
+		};
+		showWindow('choose-ext-client-window');
 	});
 };
 
-function loadAddTorrent(api_key, client_type) {
-	const form = document.querySelector('#add-torrent-form tbody');
+function loadAddClient(api_key, client_type) {
+	const form = document.querySelector('#add-ext-client-form tbody');
 	form.dataset.type = client_type;
 	form.querySelectorAll(
 		'tr:not(:has(input#add-title-input, input#add-baseurl-input))'
 	).forEach(el => el.remove());
-	document.querySelector('#test-torrent-add').classList.remove(
+	document.querySelector('#test-ext-client-add').classList.remove(
 		'show-success', 'show-fail'
 	)
 	form.querySelectorAll(
@@ -210,7 +218,7 @@ function loadAddTorrent(api_key, client_type) {
 
 	fetchAPI('/externalclients/options', api_key)
 	.then(json => {
-		const client_options = json.result[client_type];
+		const client_options = json.result[client_type].tokens;
 
 		if (client_options.includes('username'))
 			form.appendChild(createUsernameInput('add-username-input'));
@@ -221,18 +229,18 @@ function loadAddTorrent(api_key, client_type) {
 		if (client_options.includes('api_token'))
 			form.appendChild(createApiTokenInput('add-token-input'));
 
-		showWindow('add-torrent-window');
+		showWindow('add-ext-client-window');
 	});
 };
 
-function saveAddTorrent() {
+function saveAddClient() {
 	usingApiKey()
 	.then(api_key => {
-		testAddTorrent(api_key).then(result => {
+		testAddClient(api_key).then(result => {
 			if (!result)
 				return;
 
-			const form = document.querySelector('#add-torrent-form tbody');
+			const form = document.querySelector('#add-ext-client-form tbody');
 			const data = {
 				client_type: form.dataset.type,
 				title: form.querySelector('#add-title-input').value,
@@ -243,18 +251,18 @@ function saveAddTorrent() {
 			};
 			sendAPI('POST', '/externalclients', api_key, {}, data)
 			.then(response => {
-				loadTorrentClients(api_key);
+				loadExternalClients(api_key);
 				closeWindow();
 			});
 		});
 	});
 };
 
-async function testAddTorrent(api_key) {
+async function testAddClient(api_key) {
 	const error = document.querySelector('#add-error');
 	hide([error]);
-	const form = document.querySelector('#add-torrent-form tbody');
-	const test_button = document.querySelector('#test-torrent-add');
+	const form = document.querySelector('#add-ext-client-form tbody');
+	const test_button = document.querySelector('#test-ext-client-add');
 	test_button.classList.remove('show-success', 'show-fail');
 	const data = {
 		client_type: form.dataset.type,
@@ -278,18 +286,17 @@ async function testAddTorrent(api_key) {
 	});
 };
 
-function loadTorrentClients(api_key) {
+function loadExternalClients(api_key) {
 	fetchAPI('/externalclients', api_key)
 	.then(json => {
-		const table = document.querySelector('#torrent-client-list');
-		document.querySelectorAll('#torrent-client-list > :not(:first-child)')
-			.forEach(el => el.remove());
-
+		Object.values(client_lists).forEach(l => 
+			l.querySelectorAll(':not(:first-child)').forEach(e => e.remove())
+		);
 		json.result.forEach(client => {
 			const entry = document.createElement('button');
-			entry.onclick = (e) => loadEditTorrent(api_key, client.id);
+			entry.onclick = (e) => loadEditClient(api_key, client.id);
 			entry.innerText = client.title;
-			table.appendChild(entry);
+			client_lists[client.download_type].appendChild(entry);
 		});
 	});
 };
@@ -297,7 +304,7 @@ function loadTorrentClients(api_key) {
 function fillCredentials(api_key) {
 	fetchAPI('/credentials', api_key)
 	.then(json => {
-		document.querySelectorAll('#mega-creds, #pixeldrain-creds, #airdcpp-creds').forEach(
+		document.querySelectorAll('#mega-creds, #pixeldrain-creds').forEach(
 			c => c.innerHTML = ''
 		);
 		json.result.forEach(result => {
@@ -317,20 +324,11 @@ function fillCredentials(api_key) {
 					e => sendAPI('DELETE', `/credentials/${result.id}`, api_key)
 						.then(response => row.remove());
 				document.querySelector('#pixeldrain-creds').appendChild(row);
-			}
-			else if (result.source === 'airdcpp') {
-				const row = document.querySelector('.pre-build-els .airdcpp-cred-entry').cloneNode(true);
-				row.querySelector('.airdcpp-url').innerText = result.api_key;
-				row.querySelector('.airdcpp-username').innerText = result.username;
-				row.querySelector('.delete-credential').onclick =
-					e => sendAPI('DELETE', `/credentials/${result.id}`, api_key)
-						.then(response => row.remove());
-				document.querySelector('#airdcpp-creds').appendChild(row);
-			}
+			};
 		});
 	});
 	
-	document.querySelectorAll('#mega-form input, #pixeldrain-form input, #airdcpp-form input').forEach(
+	document.querySelectorAll('#mega-form input, #pixeldrain-form input').forEach(
 		i => i.value = ''
 	);
 };
@@ -352,15 +350,7 @@ function addCredential() {
 			source: source,
 			api_key: document.querySelector('#add-pixeldrain .pixeldrain-key input').value
 		};
-	
-	else if (source === 'airdcpp')
-		data = {
-			source: source,
-			api_key: document.querySelector('#add-airdcpp .airdcpp-url input').value,
-			username: document.querySelector('#add-airdcpp .airdcpp-username input').value,
-			password: document.querySelector('#add-airdcpp .airdcpp-password input').value
-		};
-	
+
 	usingApiKey().then(api_key => {
 		sendAPI('POST', '/credentials', api_key, {}, data)
 		.then(response => fillCredentials(api_key))
@@ -381,15 +371,16 @@ function addCredential() {
 usingApiKey()
 .then(api_key => {
 	fillCredentials(api_key);
-	loadTorrentClients(api_key);
-	document.querySelector('#delete-torrent-edit').onclick = e => deleteTorrent(api_key);
-	document.querySelector('#test-torrent-edit').onclick = e => testEditTorrent(api_key);
-	document.querySelector('#test-torrent-add').onclick = e => testAddTorrent(api_key);
-	document.querySelector('#add-torrent-client').onclick = e => loadTorrentList(api_key);
+	loadExternalClients(api_key);
+	document.querySelector('#delete-ext-client-edit').onclick = e => deleteClient(api_key);
+	document.querySelector('#test-ext-client-edit').onclick = e => testEditClient(api_key);
+	document.querySelector('#test-ext-client-add').onclick = e => testAddClient(api_key);
+	document.querySelector('#add-torrent-client').onclick = e => loadClientList(api_key, 2);
+	document.querySelector('#add-dcpp-client').onclick = e => loadClientList(api_key, 3);
 });
 
-document.querySelector('#edit-torrent-form').action = 'javascript:saveEditTorrent()';
-document.querySelector('#add-torrent-form').action = 'javascript:saveAddTorrent()';
+document.querySelector('#edit-ext-client-form').action = 'javascript:saveEditClient()';
+document.querySelector('#add-ext-client-form').action = 'javascript:saveAddClient()';
 document.querySelectorAll('#cred-container > form').forEach(
 	f => f.action = 'javascript:addCredential();'
 );

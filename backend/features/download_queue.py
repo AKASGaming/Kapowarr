@@ -11,13 +11,16 @@ from typing_extensions import assert_never
 
 from backend.base.custom_exceptions import (DownloadLimitReached,
                                             DownloadNotFound,
-                                            DownloadUnmovable, FailedGCPage,
-                                            InvalidKeyValue, IssueNotFound,
-                                            LinkBroken)
+                                            DownloadUnmovable,
+                                            ExternalClientNotFound,
+                                            ExternalClientNotWorking,
+                                            FailedGCPage, InvalidKeyValue,
+                                            IssueNotFound, LinkBroken)
 from backend.base.definitions import (BlocklistReason, Constants,
                                       Download, DownloadSource,
                                       DownloadState, ExternalDownload,
                                       FailReason, SeedingHandling)
+from backend.base.file_extraction import extract_filename_data
 from backend.base.files import create_folder, delete_file_folder
 from backend.base.helpers import CommaList, Singleton, get_subclasses
 from backend.base.logging import LOGGER
@@ -25,10 +28,12 @@ from backend.features.post_processing import (PostProcessor,
                                               PostProcessorTorrentsComplete,
                                               PostProcessorTorrentsCopy)
 from backend.implementations.blocklist import add_to_blocklist
+from backend.implementations.dcpp_clients.airdcpp import \
+    get_dcpp_link_components
 from backend.implementations.download_clients import (BaseDirectDownload,
+                                                      DCPPDownload,
                                                       MegaDownload,
-                                                      TorrentDownload,
-                                                      AirDCPPDownload)
+                                                      TorrentDownload)
 from backend.implementations.external_clients import ExternalClients
 from backend.implementations.getcomics import GetComicsPage
 from backend.implementations.volumes import Issue
@@ -103,6 +108,63 @@ class DownloadHandler(metaclass=Singleton):
         self._process_queue()
         return
 
+    def __run_dcpp_download(self, download: DCPPDownload) -> None:
+        """Start a DC++ download. Intended to be run in a thread.
+
+        Args:
+            download (DCPPDownload): The DC++ download to run.
+                One of the entries in self.queue.
+        """
+        ws = WebSocket()
+
+        try:
+            download.run()
+
+        except ExternalClientNotWorking:
+            self.queue.remove(download)
+            ws.send_queue_ended(download)
+            return
+
+        except DownloadLimitReached as e:
+            self._remove_dcpp(external_client_id=e.external_client_id)
+            ws.send_queue_ended(download)
+            return
+
+        while True:
+            download.update_status()
+            ws.update_queue_status(download)
+
+            if download.state == DownloadState.CANCELED_STATE:
+                download.remove_from_client(delete_files=True)
+                PostProcessor.canceled(download)
+                self.queue.remove(download)
+                break
+
+            elif download.state == DownloadState.FAILED_STATE:
+                download.remove_from_client(delete_files=True)
+                PostProcessor.perm_failed(download)
+                self.queue.remove(download)
+                break
+
+            elif download.state == DownloadState.SHUTDOWN_STATE:
+                break
+
+            elif download.state == DownloadState.IMPORTING_STATE:
+                if self.settings.sv.delete_completed_torrents:
+                    download.remove_from_client(delete_files=False)
+                PostProcessor.success(download)
+                self.queue.remove(download)
+                break
+
+            else:
+                # Queued or downloading
+                download.sleep_event.wait(
+                    timeout=Constants.EXTERNAL_CLIENT_UPDATE_INTERVAL
+                )
+
+        ws.send_queue_ended(download)
+        return
+
     def __run_torrent_download(self, download: TorrentDownload) -> None:
         """Start a torrent download. Intended to be run in a thread.
 
@@ -110,9 +172,16 @@ class DownloadHandler(metaclass=Singleton):
             download (TorrentDownload): The torrent download to run.
                 One of the entries in self.queue.
         """
-        download.run()
-
         ws = WebSocket()
+
+        try:
+            download.run()
+
+        except ExternalClientNotWorking:
+            self.queue.remove(download)
+            ws.send_queue_ended(download)
+            return
+
         seeding_handling = self.settings.sv.seeding_handling
 
         if seeding_handling == SeedingHandling.COMPLETE:
@@ -168,7 +237,7 @@ class DownloadHandler(metaclass=Singleton):
                 # Or seeding with files copied
                 # Or seeding with seeding_handling = 'complete'
                 download.sleep_event.wait(
-                    timeout=Constants.TORRENT_UPDATE_INTERVAL
+                    timeout=Constants.EXTERNAL_CLIENT_UPDATE_INTERVAL
                 )
 
         ws.send_queue_ended(download)
@@ -256,9 +325,9 @@ class DownloadHandler(metaclass=Singleton):
                     external_client_id = None
 
                 if isinstance(download.covered_issues, tuple):
-                    covered_issues = CommaList(
+                    covered_issues = str(CommaList(
                         map(str, download.covered_issues)
-                    ).__str__()
+                    ))
 
                 elif isinstance(download.covered_issues, float):
                     covered_issues = str(download.covered_issues)
@@ -303,11 +372,20 @@ class DownloadHandler(metaclass=Singleton):
                     name='Download Handler'
                 )
 
-            if isinstance(download, TorrentDownload):
+            elif isinstance(download, TorrentDownload):
                 thread = SERVER.get_db_thread(
                     target=self.__run_torrent_download,
                     args=(download,),
                     name='Torrent Download Handler'
+                )
+                download.download_thread = thread
+                thread.start()
+
+            elif isinstance(download, DCPPDownload):
+                thread = SERVER.get_db_thread(
+                    target=self.__run_dcpp_download,
+                    args=(download,),
+                    name='DCPP Download Handler'
                 )
                 download.download_thread = thread
                 thread.start()
@@ -353,7 +431,7 @@ class DownloadHandler(metaclass=Singleton):
         """
         if link.startswith(Constants.GC_SITE_URL):
             return 'gc'
-        elif link.startswith("airdcpp://"):
+        elif link.startswith(Constants.DCPP_URL_PREFIX):
             return 'airdcpp'
         return None
 
@@ -458,35 +536,33 @@ class DownloadHandler(metaclass=Singleton):
                 return [], e.reason
 
         elif link_type == 'airdcpp':
-            # Create an AirDCPP download
-            from urllib.parse import unquote
-            
-            # Extract filename from URL
-            filename = unquote(link.split('/')[-1])
-            
-            issue_number = None
-            if issue_id is not None:
-                try:
-                    issue = Issue(issue_id)
-                    issue_number = issue.get_data().calculated_issue_number
-                except:
-                    pass
-            
+            client_id, *_, name = get_dcpp_link_components(link)
+            efd = extract_filename_data(
+                name,
+                assume_volume_number=False,
+                fix_year=True
+            )
+
             try:
-                downloads = [AirDCPPDownload(
+                source_name = ExternalClients.get_client(client_id).title
+
+                downloads.append(DCPPDownload(
                     download_link=link,
                     volume_id=volume_id,
-                    covered_issues=issue_number,
-                    source_type=DownloadSource.AIRDCPP,
-                    source_name='AirDC++',
-                    web_link=link,
-                    web_title=filename,
+                    covered_issues=efd['issue_number'],
+                    source_type=DownloadSource.DCPP,
+                    source_name=source_name,
+                    web_link=None,
+                    web_title=None,
                     web_sub_title=None,
                     forced_match=force_match
-                )]
-            except Exception as e:
-                LOGGER.error(f"Failed to create AirDCPP download: {str(e)}")
-                return [], FailReason.NO_WORKING_LINKS
+                ))
+
+            except IssueNotFound:
+                return [], FailReason.NO_MATCHES
+
+            except ExternalClientNotFound:
+                return [], FailReason.EXTERNAL_CLIENT_NOT_FOUND
 
         result = self.__prepare_downloads_for_queue(
             downloads,
@@ -698,9 +774,29 @@ class DownloadHandler(metaclass=Singleton):
                 self.remove(download.id)
         return
 
+    def _remove_dcpp(self, external_client_id: Union[int, None] = None) -> None:
+        """Remove all DC++ downloads from the queue. If external_client_id is
+        given, only remove DC++ downloads from that client.
+
+        Args:
+            external_client_id (Union[int, None], optional): Only remove downloads
+            from the external client with the given ID.
+                Defaults to None.
+        """
+        for download in self.queue[::-1]:
+            if (
+                isinstance(download, DCPPDownload)
+                and (
+                    not external_client_id
+                    or download.external_client.id == external_client_id
+                )
+            ):
+                self.remove(download.id)
+        return
+
     def remove_all(self) -> None:
         """Remove all downloads from the queue"""
-        for download in self.queue[::-1]:
+        for download in reversed(self.queue):
             self.remove(download.id)
         return
 

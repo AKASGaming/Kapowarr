@@ -164,6 +164,7 @@ class ExternalClients:
         Returns:
             Dict[str, Type[ExternalDownloadClient]]: The mapping.
         """
+        from backend.implementations.dcpp_clients import airdcpp
         from backend.implementations.torrent_clients import qBittorrent
         return {
             client.client_type: client
@@ -266,6 +267,7 @@ class ExternalClients:
         if username is not None and password is None:
             raise InvalidKeyValue('password', password)
 
+        base_url = normalize_base_url(base_url)
         test_result = ExternalClients.test(
             client_type,
             base_url,
@@ -282,7 +284,7 @@ class ExternalClients:
             'download_type': ClientClass.download_type.value,
             'client_type': client_type,
             'title': title,
-            'base_url': normalize_base_url(base_url),
+            'base_url': base_url,
             'username': username,
             'password': password,
             'api_token': api_token
@@ -316,21 +318,34 @@ class ExternalClients:
         return ExternalClients.get_client(client_id)
 
     @staticmethod
-    def get_clients() -> List[Dict[str, Any]]:
-        """Get a list of all external clients.
+    def get_clients(
+        download_type: Union[DownloadType, None] = None
+    ) -> List[Dict[str, Any]]:
+        """Get a list of the external clients.
+
+        Args:
+            download_type (Union[DownloadType, None], optional): The download
+            type to filter the clients by.
+                Defaults to None.
 
         Returns:
-            List[Dict[str, Any]]: The list with all external clients.
+            List[Dict[str, Any]]: The list with the external clients.
         """
-        result = get_db().execute("""
+        type_filter = ''
+        if download_type is not None:
+            type_filter = 'WHERE download_type = ?'
+
+        result = get_db().execute(f"""
             SELECT
                 id, download_type, client_type,
                 title, base_url,
                 username, password,
                 api_token
             FROM external_download_clients
+            {type_filter}
             ORDER BY title, id;
-            """
+            """,
+            {"download_type": download_type.value if download_type else None}
         ).fetchalldict()
         return result
 

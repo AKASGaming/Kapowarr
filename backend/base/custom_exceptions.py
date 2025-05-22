@@ -312,10 +312,15 @@ class CredentialInvalid(Exception):
 class DownloadLimitReached(Exception):
     """The download limit (download quota) of the source is reached"""
 
-    def __init__(self, source: DownloadSource) -> None:
+    def __init__(
+        self,
+        source: DownloadSource,
+        external_client_id: Union[int, None] = None
+    ) -> None:
         self.source = source
+        self.external_client_id = external_client_id
         LOGGER.warning(
-            f"Download source {source.value} has reached it's download limit"
+            f"Download source {source.value} {'with client id ' + str(external_client_id) if external_client_id else ''} has reached it's download limit"
         )
         return
 
@@ -323,7 +328,10 @@ class DownloadLimitReached(Exception):
     def api_response(self):
         return {
             'error': 'DownloadLimitReached',
-            'result': {'source': self.source.value},
+            'result': {
+                'source': self.source.value,
+                'external_client_id': self.external_client_id
+            },
             'code': 509
         }
 

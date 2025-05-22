@@ -355,18 +355,18 @@
 	left: 20%;
 }
 
-#choose-torrent-window > div:nth-child(2) {
+#choose-ext-client-window > div:nth-child(2) {
 	justify-content: flex-start;
 }
 
-#choose-torrent-list {
+#choose-ext-client-list {
 	display: flex;
 	justify-content: center;
 	gap: 1rem;
 	flex-wrap: wrap;
 }
 
-#choose-torrent-list > button {
+#choose-ext-client-list > button {
 	width: 10rem;
 	height: 4rem;
 
