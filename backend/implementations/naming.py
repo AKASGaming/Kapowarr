@@ -20,9 +20,12 @@ from backend.base.definitions import (BaseNamingKeys, Constants, FileConstants,
 from backend.base.file_extraction import (cover_regex, extract_filename_data,
                                           page_regex, page_regex_2,
                                           process_issue_number)
-from backend.base.files import (delete_empty_child_folders,
+from backend.base.files import (clean_filepath_simple, clean_filepath_smartly,
+                                clean_filestring_simple,
+                                clean_filestring_smartly,
+                                delete_empty_child_folders,
                                 delete_empty_parent_folders, list_files,
-                                make_filename_safe, rename_file)
+                                rename_file)
 from backend.base.helpers import (create_range, extract_year_from_date,
                                   filtered_iter)
 from backend.base.logging import LOGGER
@@ -35,6 +38,46 @@ from backend.internals.server import WebSocket
 from backend.internals.settings import Settings
 
 remove_year_in_image_regex = compile(r'(?:19|20)\d{2}')
+extra_spaces_regex = compile(r'(?<=\s)(\s+)')
+
+
+# =====================
+# region Cleaning names
+# =====================
+def clean_filestring(filestring: str) -> str:
+    """Clean a part of a filename (so no path separators) by removing
+    illegal characters or replacing them smartly (depending on the settings).
+
+    Args:
+        filestring (str): The string to clean.
+
+    Returns:
+        str: The cleaned string.
+    """
+    if Settings().sv.replace_illegal_characters:
+        result = clean_filestring_smartly(filestring)
+    else:
+        result = clean_filestring_simple(filestring)
+
+    return extra_spaces_regex.sub('', result).strip()
+
+
+def clean_filepath(filepath: str) -> str:
+    """Clean a filepath by removing illegal characters or replacing them
+    smartly (depending on the settings).
+
+    Args:
+        filepath (str): The filepath to clean.
+
+    Returns:
+        str: The cleaned filepath.
+    """
+    if Settings().sv.replace_illegal_characters:
+        result = clean_filepath_smartly(filepath)
+    else:
+        result = clean_filepath_simple(filepath)
+
+    return extra_spaces_regex.sub('', result).strip()
 
 
 # =====================
@@ -67,11 +110,7 @@ def _get_volume_naming_keys(
     settings = Settings().get_settings()
     long_special_version = settings.long_special_version
     volume_padding = settings.volume_padding
-    series_name = (
-        volume_data.title
-        .replace('/', '')
-        .replace(r'\\', '')
-    )
+    series_name = clean_filestring(volume_data.title)
 
     for prefix in ('The ', 'A '):
         if series_name.startswith(prefix):
@@ -124,12 +163,7 @@ def _get_issue_naming_keys(
             str(issue_data.issue_number or '').zfill(issue_padding)
             or None
         ),
-        issue_title=(
-            (issue_data.title or '')
-            .replace('/', '')
-            .replace(r'\\', '')
-            or None
-        ),
+        issue_title=clean_filestring(issue_data.title or '') or None,
         issue_release_date=issue_data.date,
         issue_release_year=extract_year_from_date(issue_data.date)
     )
@@ -154,7 +188,7 @@ def generate_volume_folder_name(
         k: v if v is not None else 'Unknown'
         for k, v in formatting_data.__dict__.items()
     })
-    save_name = make_filename_safe(name)
+    save_name = clean_filepath(name)
     return save_name
 
 
@@ -177,7 +211,7 @@ def generate_volume_folder_path(
     else:
         vf = generate_volume_folder_name(volume)
 
-    return make_filename_safe(abspath(join(root_folder, vf)))
+    return clean_filepath(abspath(join(root_folder, vf)))
 
 
 def generate_issue_name(
@@ -263,7 +297,7 @@ def generate_issue_name(
         k: v if v is not None else 'Unknown'
         for k, v in formatting_data.__dict__.items()
     })
-    save_name = make_filename_safe(name)
+    save_name = clean_filepath(name)
 
     if (
         normal_filename
@@ -276,7 +310,7 @@ def generate_issue_name(
                 k: v if v is not None else 'Unknown'
                 for k, v in formatting_data.__dict__.items()
             })
-            titleless_save_name = make_filename_safe(titleless_name)
+            titleless_save_name = clean_filepath(titleless_name)
             if len(titleless_save_name) <= Constants.MAX_FILENAME_LENGTH:
                 save_name = titleless_save_name
 
@@ -295,7 +329,7 @@ def generate_issue_name(
                 k: v if v is not None else 'Unknown'
                 for k, v in formatting_data.__dict__.items()
             })
-            titleless_save_name = make_filename_safe(titleless_name)
+            titleless_save_name = clean_filepath(titleless_name)
             if (
                 extract_filename_data(titleless_save_name)['issue_number']
                     == calculated_issue_number
@@ -596,7 +630,7 @@ def check_mock_filename(
                 k: v if v is not None else 'Unknown'
                 for k, v in formatting_data.__dict__.items()
             })
-            save_name = make_filename_safe(name)
+            save_name = clean_filepath(name)
 
             number_to_year: Dict[float, Union[int, None]] = {
                 i.calculated_issue_number: extract_year_from_date(i.date)

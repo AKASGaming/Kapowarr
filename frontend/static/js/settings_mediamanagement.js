@@ -1,5 +1,6 @@
 const inputs = {
 	'renaming_input': document.querySelector('#renaming-input'),
+	'replace_illegal_characters': document.querySelector('#replace-chars-input'),
 	'volume_folder_naming_input': document.querySelector('#volume-folder-naming-input'),
 	'file_naming_input': document.querySelector('#file-naming-input'),
 	'file_naming_empty_input': document.querySelector('#file-naming-empty-input'),
@@ -21,6 +22,7 @@ function fillSettings(api_key) {
 	fetchAPI('/settings', api_key)
 	.then(json => {
 		inputs.renaming_input.checked = json.result.rename_downloaded_files;
+		inputs.replace_illegal_characters.checked = json.result.replace_illegal_characters;
 		inputs.volume_folder_naming_input.value = json.result.volume_folder_naming;
 		inputs.file_naming_input.value = json.result.file_naming;
 		inputs.file_naming_empty_input.value = json.result.file_naming_empty;
@@ -46,8 +48,9 @@ function saveSettings(api_key) {
 	inputs.file_naming_sv_input.classList.remove('error-input');
 	inputs.file_naming_vai_input.classList.remove('error-input');
 	const data = {
-		'rename_downloaded_files': document.querySelector('#renaming-input').checked,
-		'volume_folder_naming': document.querySelector('#volume-folder-naming-input').value,
+		'rename_downloaded_files': inputs.renaming_input.checked,
+		'replace_illegal_characters': inputs.replace_illegal_characters.checked,
+		'volume_folder_naming': inputs.volume_folder_naming_input.value,
 		'file_naming': inputs.file_naming_input.value,
 		'file_naming_empty': inputs.file_naming_empty_input.value,
 		'file_naming_special_version': inputs.file_naming_sv_input.value,
