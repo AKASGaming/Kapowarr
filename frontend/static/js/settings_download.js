@@ -3,7 +3,7 @@ function fillSettings(api_key) {
 	.then(json => {
 		document.querySelector('#download-folder-input').value = json.result.download_folder;
 		document.querySelector('#concurrent-direct-downloads-input').value = json.result.concurrent_direct_downloads;
-		document.querySelector('#torrent-timeout-input').value = ((json.result.failing_torrent_timeout || 0) / 60) || '';
+		document.querySelector('#download-timeout-input').value = ((json.result.failing_download_timeout || 0) / 60) || '';
 		document.querySelector('#seeding-handling-input').value = json.result.seeding_handling;
 		document.querySelector('#delete-torrents-input').checked = json.result.delete_completed_torrents;
 		fillPref(json.result.service_preference);
@@ -16,7 +16,7 @@ function saveSettings(api_key) {
 	const data = {
 		'download_folder': document.querySelector('#download-folder-input').value,
 		'concurrent_direct_downloads': parseInt(document.querySelector('#concurrent-direct-downloads-input').value),
-		'failing_torrent_timeout': parseInt(document.querySelector('#torrent-timeout-input').value || 0) * 60,
+		'failing_download_timeout': parseInt(document.querySelector('#download-timeout-input').value || 0) * 60,
 		'seeding_handling': document.querySelector('#seeding-handling-input').value,
 		'delete_completed_torrents': document.querySelector('#delete-torrents-input').checked,
 		'service_preference': [...document.querySelectorAll('#pref-table select')].map(e => e.value)

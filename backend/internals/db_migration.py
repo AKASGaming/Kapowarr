@@ -1195,3 +1195,28 @@ class MigrateAddMonitorNewIssuesToVolumes(DBMigrator):
                 monitor_new_issues BOOL NOT NULL DEFAULT 1;
         """)
         return
+
+
+class MigrateTorrentTimeoutToDownloadTimeout(DBMigrator):
+    start_version = 38
+
+    def run(self) -> None:
+        # V38 -> V39
+
+        from backend.internals.db import get_db
+
+        cursor = get_db()
+
+        old_value = cursor.execute(
+            "SELECT value FROM config WHERE key = 'failing_torrent_timeout' LIMIT 1;"
+        ).fetchone()[0]
+
+        cursor.execute(
+            "UPDATE config SET value = ? WHERE key = 'failing_download_timeout';",
+            (old_value,))
+
+        cursor.execute(
+            "DELETE FROM config WHERE key = 'failing_torrent_timeout';"
+        )
+
+        return

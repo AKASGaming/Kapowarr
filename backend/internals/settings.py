@@ -2,7 +2,6 @@
 
 from dataclasses import _MISSING_TYPE, asdict, dataclass, field
 from functools import lru_cache
-from json import dump, load
 from logging import INFO
 from os import urandom
 from os.path import abspath, isdir, join, sep
@@ -56,7 +55,7 @@ class SettingsValues:
     ))
     download_folder: str = folder_path('temp_downloads')
     concurrent_direct_downloads: int = 1
-    failing_torrent_timeout: int = 0
+    failing_download_timeout: int = 0
     seeding_handling: SeedingHandling = SeedingHandling.COPY
     delete_completed_torrents: bool = True
 
@@ -383,7 +382,7 @@ class Settings(metaclass=Singleton):
         elif key == 'concurrent_direct_downloads' and value <= 0:
             raise InvalidSettingValue(key, value)
 
-        elif key == 'failing_torrent_timeout' and value < 0:
+        elif key == 'failing_download_timeout' and value < 0:
             raise InvalidSettingValue(key, value)
 
         elif key == 'volume_padding' and not 1 <= value <= 3:
