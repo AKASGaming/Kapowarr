@@ -5,7 +5,7 @@ function fillSettings(api_key) {
 		document.querySelector('#concurrent-direct-downloads-input').value = json.result.concurrent_direct_downloads;
 		document.querySelector('#download-timeout-input').value = ((json.result.failing_download_timeout || 0) / 60) || '';
 		document.querySelector('#seeding-handling-input').value = json.result.seeding_handling;
-		document.querySelector('#delete-torrents-input').checked = json.result.delete_completed_torrents;
+		document.querySelector('#delete-downloads-input').checked = json.result.delete_completed_downloads;
 		fillPref(json.result.service_preference);
 	});
 };
@@ -18,7 +18,7 @@ function saveSettings(api_key) {
 		'concurrent_direct_downloads': parseInt(document.querySelector('#concurrent-direct-downloads-input').value),
 		'failing_download_timeout': parseInt(document.querySelector('#download-timeout-input').value || 0) * 60,
 		'seeding_handling': document.querySelector('#seeding-handling-input').value,
-		'delete_completed_torrents': document.querySelector('#delete-torrents-input').checked,
+		'delete_completed_downloads': document.querySelector('#delete-downloads-input').checked,
 		'service_preference': [...document.querySelectorAll('#pref-table select')].map(e => e.value)
 	};
 	sendAPI('PUT', '/settings', api_key, {}, data)
