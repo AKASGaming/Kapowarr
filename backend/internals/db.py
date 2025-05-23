@@ -247,20 +247,6 @@ def close_db(e: Union[None, BaseException] = None):
     return
 
 
-def close_all_db() -> None:
-    "Close all non-temporary database connections that are still open"
-    LOGGER.debug('Closing any open database connections')
-
-    for i in DBConnectionManager.instances.values():
-        if not i.closed:
-            i.close()
-
-    c = DBConnection(timeout=20.0)
-    c.commit()
-    c.close()
-    return
-
-
 def setup_db() -> None:
     """
     Setup the database tables and default config when they aren't setup yet
