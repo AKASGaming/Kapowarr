@@ -247,6 +247,16 @@ def close_db(e: Union[None, BaseException] = None):
     return
 
 
+def setup_db_adapters_and_converters() -> None:
+    """Add DB adapters and converters for custom types and bool"""
+    register_adapter(bool, lambda b: int(b))
+    register_converter("BOOL", lambda b: b == b'1')
+    register_adapter(CommaList, lambda c: str(c))
+    register_adapter(SeedingHandling, lambda e: e.value)
+    register_adapter(SpecialVersion, lambda e: e.value)
+    return
+
+
 def setup_db() -> None:
     """
     Setup the database tables and default config when they aren't setup yet
@@ -255,11 +265,7 @@ def setup_db() -> None:
 
     cursor = get_db()
     cursor.execute("PRAGMA journal_mode = wal;")
-    register_adapter(bool, lambda b: int(b))
-    register_converter("BOOL", lambda b: b == b'1')
-    register_adapter(CommaList, lambda c: str(c))
-    register_adapter(SeedingHandling, lambda e: e.value)
-    register_adapter(SpecialVersion, lambda e: e.value)
+    setup_db_adapters_and_converters()
 
     setup_commands = """
         CREATE TABLE IF NOT EXISTS config(

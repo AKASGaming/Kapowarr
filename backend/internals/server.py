@@ -20,7 +20,9 @@ from backend.base.definitions import Constants, RestartVersion, SocketEvent
 from backend.base.files import folder_path
 from backend.base.helpers import Singleton
 from backend.base.logging import LOGGER, set_log_level, setup_logging
-from backend.internals.db import DBConnectionManager, close_db, set_db_location
+from backend.internals.db import (DBConnectionManager, close_db,
+                                  set_db_location,
+                                  setup_db_adapters_and_converters)
 from backend.internals.settings import Settings
 
 if TYPE_CHECKING:
@@ -448,6 +450,7 @@ def setup_process(
     setup_logging(do_rollover=False)
     set_log_level(log_level)
     set_db_location(db_folder)
+    setup_db_adapters_and_converters()
 
     app = Flask(__name__)
     app.teardown_appcontext(close_db)
