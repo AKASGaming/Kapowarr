@@ -20,7 +20,7 @@ from backend.base.file_extraction import extract_filename_data
 from backend.base.files import (create_folder, delete_empty_parent_folders,
                                 delete_file_folder, folder_path,
                                 generate_archive_folder, list_files,
-                                rename_file)
+                                rename_file, set_detected_extension)
 from backend.base.logging import LOGGER
 from backend.implementations.matching import folder_extraction_filter
 from backend.implementations.naming import mass_rename
@@ -83,7 +83,7 @@ def extract_files_from_folder(
                 volume_issues,
                 end_year
             )
-            and 'variant cover' not in c.lower()
+            and 'variantcover' not in c.lower().replace(' ', '')
         )
     ]
     LOGGER.debug(f'Relevant files: {rel_files}')
@@ -96,6 +96,8 @@ def extract_files_from_folder(
 
         else:
             dest = join(volume_data.folder, basename(c))
+
+        dest = splitext(dest)[0] + splitext(set_detected_extension(c))[1]
 
         rename_file(c, dest)
         result.append(dest)

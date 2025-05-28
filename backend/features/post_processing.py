@@ -6,12 +6,13 @@ The post-download processing (a.k.a. post-processing or PP) of downloads.
 
 from __future__ import annotations
 
-from os.path import basename, exists, join, splitext
+from os.path import basename, exists, isfile, join, splitext
 from time import time
 from typing import TYPE_CHECKING
 
 from backend.base.definitions import SCANNABLE_EXTENSIONS, BlocklistReason
-from backend.base.files import copy_directory, delete_file_folder, rename_file
+from backend.base.files import (copy_directory, delete_file_folder,
+                                rename_file, set_detected_extension)
 from backend.base.logging import LOGGER
 from backend.implementations.blocklist import add_to_blocklist
 from backend.implementations.conversion import mass_convert
@@ -220,6 +221,28 @@ def delete_file(download: Download) -> None:
 
 
 # region Extras
+def rename_with_proper_extension(download: Download) -> None:
+    """
+    Rename a file with the proper extension based on mimetype. Rescan files
+    in case a rename is done.
+    """
+    file_renamed = False
+    for idx, file in enumerate(download.files):
+        if not isfile(file):
+            continue
+
+        new_file = set_detected_extension(file)
+        if new_file != file:
+            rename_file(file, new_file)
+            download.files[idx] = new_file
+            file_renamed = True
+
+    if file_renamed:
+        scan_files(download.volume_id)
+
+    return
+
+
 def convert_file(download: Download) -> None:
     "Convert a file into a different format based on settings"
     if not Settings().sv.convert:
@@ -233,14 +256,15 @@ def convert_file(download: Download) -> None:
     return
 
 
+# region Post-Processors
 class PostProcessor:
     actions_success = [
         remove_from_queue,
         add_to_history,
         move_to_dest,
+        rename_with_proper_extension,
         add_file_to_database,
-        convert_file,
-        add_file_to_database
+        convert_file
     ]
 
     actions_seeding = []
@@ -317,8 +341,7 @@ class PostProcessorTorrentsComplete(PostProcessor):
         remove_from_queue,
         add_to_history,
         move_torrent_to_dest,
-        convert_file,
-        add_file_to_database
+        convert_file
     ]
 
 
@@ -332,6 +355,5 @@ class PostProcessorTorrentsCopy(PostProcessor):
         add_to_history,
         copy_file_torrent,
         convert_file,
-        add_file_to_database,
         reset_file_link
     ]
