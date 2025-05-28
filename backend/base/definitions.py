@@ -247,6 +247,8 @@ class LibrarySorting(BaseEnum):
     PUBLISHER = 'publisher, title, year, volume_number'
     WANTED = ('issues_downloaded_monitored >= issue_count_monitored, '
               'title, year, volume_number')
+    RECENTLY_RELEASED = ('(SELECT MAX(date) FROM vol_issues) DESC, '
+                         'title, year, volume_number')
 
 
 class LibraryFilters(BaseEnum):
