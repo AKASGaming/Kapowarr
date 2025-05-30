@@ -699,7 +699,9 @@ class Mega(MegaABC):
                 try:
                     chunk = r.read(chunk_size)
                 except ProtocolError:
-                    break
+                    # Server responded with invalid data, probably
+                    # download limit reached
+                    chunk = None
 
                 if not chunk:
                     # Download limit reached mid download
@@ -730,9 +732,11 @@ class Mega(MegaABC):
     def stop(self) -> None:
         self.downloading = False
         if (
-            self.__r
-            and self.__r._fp
+            self.__r is not None
+            and self.__r._fp is not None
             and not isinstance(self.__r._fp, str)
+            and self.__r._fp.fp is not None
+            and self.__r._fp.fp.raw is not None
         ):
             self.__r._fp.fp.raw._sock.shutdown(2) # SHUT_RDWR
         return
@@ -877,7 +881,9 @@ class MegaFolder(MegaABC):
                         try:
                             chunk = r.read(chunk_size)
                         except ProtocolError:
-                            break
+                            # Server responded with invalid data, probably
+                            # download limit reached
+                            chunk = None
 
                         if not chunk:
                             # Download limit reached mid download
@@ -911,9 +917,11 @@ class MegaFolder(MegaABC):
     def stop(self) -> None:
         self.downloading = False
         if (
-            self.__r
-            and self.__r._fp
+            self.__r is not None
+            and self.__r._fp is not None
             and not isinstance(self.__r._fp, str)
+            and self.__r._fp.fp is not None
+            and self.__r._fp.fp.raw is not None
         ):
             self.__r._fp.fp.raw._sock.shutdown(2) # SHUT_RDWR
         return
