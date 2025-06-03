@@ -176,9 +176,11 @@ function fillPage(data, api_key) {
 
 	// Tags
 	const tags = ViewEls.vol_data.tags;
-	const year = document.createElement('p');
-	year.innerText = data.year;
-	tags.appendChild(year);
+	if (data.year !== null) {
+		const year = document.createElement('p');
+		year.innerText = data.year;
+		tags.appendChild(year);
+	}
 	const volume_number = document.createElement('p');
 	volume_number.innerText = `Volume ${data.volume_number || 1}`;
 	tags.appendChild(volume_number);
