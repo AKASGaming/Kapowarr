@@ -89,14 +89,14 @@ def _get_articles(
     """
     result: List[Tuple[str, str]] = []
     for article in soup.find_all("article", {"class": "post"}):
+        title_el = article.find("h1", {"class": "post-title"})
+        if not title_el:
+            continue
+
         link = create_range(
-            article.find('a')["href"] or ''
+            title_el.find('a')["href"] or ''
         )[0]
-        title = (
-            article
-            .find("h1", {"class": "post-title"})
-            .get_text(strip=True)
-        )
+        title = title_el.get_text(strip=True)
         result.append((link, title))
 
     return result
