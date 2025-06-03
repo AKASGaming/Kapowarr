@@ -225,7 +225,8 @@ function connectToWebSocket() {
 		path: `${url_base}/api/socket.io`,
 		transports: ["polling"],
 		upgrade: false,
-		autoConnect: false
+		autoConnect: false,
+		closeOnBeforeunload: true
 	});
 	socket.on('connect', () => console.log('Connected to WebSocket'));
 	socket.on('disconnect', () => {
