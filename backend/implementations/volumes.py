@@ -1427,9 +1427,9 @@ def scan_files(
 def refresh_and_scan(
     volume_id: Union[int, None] = None,
     update_websocket: bool = False,
-    allow_skipping: bool = False
+    allow_skipping: bool = True
 ) -> None:
-    """Refresh and scan one or more volumes
+    """Refresh and scan one or more volumes.
 
     Args:
         volume_id (Union[int, None], optional): The id of the volume if it is
@@ -1442,42 +1442,73 @@ def refresh_and_scan(
             Defaults to False.
 
         allow_skipping (bool, optional): Skip volumes that have been updated in
-        the last 24 hours.
-            Defaults to False.
+        the last 24 hours or that still have the same amount of issues.
+            Defaults to True.
     """
     cursor = get_db()
 
     one_day_ago = round(time()) - SECONDS_IN_DAY
+    five_days_ago = round(time()) - (5 * SECONDS_IN_DAY)
     if volume_id:
-        cv_to_id = dict(cursor.execute(
-            "SELECT comicvine_id, id FROM volumes WHERE id = ? LIMIT 1;",
+        cursor.execute("""
+            SELECT comicvine_id, id, last_cv_fetch
+            FROM volumes
+            WHERE id = ?
+            LIMIT 1;
+            """,
             (volume_id,)
-        ))
+        )
 
     elif not allow_skipping:
-        cv_to_id = dict(cursor.execute("""
-            SELECT comicvine_id, id
+        cursor.execute("""
+            SELECT comicvine_id, id, last_cv_fetch
             FROM volumes
             ORDER BY last_cv_fetch ASC;
             """
-        ))
+        )
 
     else:
-        cv_to_id = dict(cursor.execute("""
-            SELECT comicvine_id, id
+        cursor.execute("""
+            SELECT comicvine_id, id, last_cv_fetch
             FROM volumes
             WHERE last_cv_fetch <= ?
             ORDER BY last_cv_fetch ASC;
             """,
             (one_day_ago,)
-        ))
-    cv_to_id: Dict[int, int]
-    if not cv_to_id:
+        )
+
+    cv_to_id_fetch: Dict[int, Tuple[int, int]] = {
+        e["comicvine_id"]: (e["id"], e["last_cv_fetch"])
+        for e in cursor
+    }
+    if not cv_to_id_fetch:
         return
 
     # Update volumes
     cv = ComicVine()
-    volume_datas = run(cv.fetch_volumes(tuple(cv_to_id.keys())))
+    volume_datas = filtered_volume_datas = run(
+        cv.fetch_volumes(tuple(cv_to_id_fetch.keys()))
+    )
+
+    if not volume_id and allow_skipping:
+        cv_id_to_issue_count: Dict[int, int] = dict(cursor.execute("""
+            SELECT v.comicvine_id, COUNT(i.id)
+            FROM volumes v
+            LEFT JOIN issues i
+            ON v.id = i.volume_id
+            WHERE v.last_cv_fetch <= ?
+            GROUP BY i.volume_id;
+            """,
+            (one_day_ago,)
+        ))
+
+        filtered_volume_datas = [
+            v
+            for v in volume_datas
+            if cv_id_to_issue_count[v["comicvine_id"]] != v["issue_count"]
+            or cv_to_id_fetch[v["comicvine_id"]][1] <= five_days_ago
+        ]
+
     cursor.executemany(
         """
         UPDATE volumes
@@ -1505,7 +1536,7 @@ def refresh_and_scan(
                 "cover": vd["cover"],
                 "last_cv_fetch": one_day_ago + SECONDS_IN_DAY,
 
-                "id": cv_to_id[vd["comicvine_id"]]
+                "id": cv_to_id_fetch[vd["comicvine_id"]][0]
             }
             for vd in volume_datas
         )
@@ -1513,15 +1544,12 @@ def refresh_and_scan(
     commit()
 
     # Update issues
-    issue_datas = run(cv.fetch_issues(tuple(
-        v['comicvine_id'] for v in volume_datas
+    issue_datas = run(cv.fetch_issues(
+        tuple(vd["comicvine_id"] for vd in filtered_volume_datas)
+    ))
+    monitor_issues_volume_ids: Set[int] = set(first_of_column(cursor.execute(
+        "SELECT id FROM volumes WHERE monitor_new_issues = 1;"
     )))
-    monitor_issues_volume_ids: Set[int] = {
-        v[0]
-        for v in cursor.execute(
-            "SELECT id FROM volumes WHERE monitor_new_issues = 1;"
-        )
-    }
     cursor.executemany(
         """
         INSERT INTO issues(
@@ -1547,14 +1575,14 @@ def refresh_and_scan(
             description = :description;
         """,
         ({
-            "volume_id": cv_to_id[isd["volume_id"]],
+            "volume_id": cv_to_id_fetch[isd["volume_id"]][0],
             "comicvine_id": isd["comicvine_id"],
             "issue_number": isd["issue_number"],
             "calculated_issue_number": isd["calculated_issue_number"] or 0.0,
             "title": isd["title"],
             "date": isd["date"],
             "description": isd["description"],
-            "monitored": cv_to_id[isd["volume_id"]] in monitor_issues_volume_ids
+            "monitored": cv_to_id_fetch[isd["volume_id"]][0] in monitor_issues_volume_ids
         }
             for isd in issue_datas
         ))
@@ -1568,7 +1596,7 @@ def refresh_and_scan(
             .setdefault(isd["volume_id"], set())
             .add(isd["comicvine_id"]))
 
-    for vd in volume_datas:
+    for vd in filtered_volume_datas:
         if len(volume_issues_fetched.get(
             vd["comicvine_id"]
         ) or tuple()) != vd["issue_count"]:
@@ -1603,9 +1631,9 @@ def refresh_and_scan(
         tuple(
             {
                 "special_version": determine_special_version(
-                    cv_to_id[vd["comicvine_id"]]
+                    cv_to_id_fetch[vd["comicvine_id"]][0]
                 ),
-                "id": cv_to_id[vd["comicvine_id"]]
+                "id": cv_to_id_fetch[vd["comicvine_id"]][0]
             }
             for vd in volume_datas
         )
@@ -1617,16 +1645,10 @@ def refresh_and_scan(
         scan_files(volume_id)
 
     else:
-        if allow_skipping:
-            v_ids = [
-                (cv_to_id[v['comicvine_id']], [], False)
-                for v in volume_datas
-            ]
-        else:
-            v_ids = [
-                (v, [], False)
-                for v in cv_to_id.values()
-            ]
+        v_ids = [
+            (v[0], [], False)
+            for v in cv_to_id_fetch.values()
+        ]
         total_count = len(v_ids)
 
         if not total_count:
