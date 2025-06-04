@@ -1245,3 +1245,20 @@ class MigrateDeleteCompletedTorrentsToDownloads(DBMigrator):
         )
 
         return
+
+
+class MigrateHashPassword(DBMigrator):
+    start_version = 40
+
+    def run(self) -> None:
+        # V40 -> V41
+
+        from backend.internals.settings import Settings
+
+        s = Settings()
+        settings = s.get_settings()
+
+        if settings.auth_password:
+            s.update({"auth_password": settings.auth_password})
+
+        return

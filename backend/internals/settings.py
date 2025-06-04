@@ -5,18 +5,19 @@ from functools import lru_cache
 from logging import INFO
 from os import urandom
 from os.path import abspath, isdir, join, sep
+from secrets import token_bytes
 from typing import Any, Dict, Mapping
 
 from backend.base.custom_exceptions import (FolderNotFound, InvalidSettingKey,
                                             InvalidSettingModification,
                                             InvalidSettingValue)
-from backend.base.definitions import (BaseEnum, GCDownloadSource,
+from backend.base.definitions import (BaseEnum, Constants, GCDownloadSource,
                                       SeedingHandling, StartType)
 from backend.base.files import (folder_is_inside_folder,
                                 folder_path, uppercase_drive_letter)
 from backend.base.helpers import (CommaList, Singleton, force_suffix,
-                                  get_python_version, normalize_base_url,
-                                  reversed_tuples)
+                                  get_python_version, hash_password,
+                                  normalize_base_url, reversed_tuples)
 from backend.base.logging import LOGGER, set_log_level
 from backend.internals.db import DBConnection, commit, get_db
 from backend.internals.db_migration import get_latest_db_version
@@ -27,6 +28,7 @@ class SettingsValues:
     database_version: int = get_latest_db_version()
     log_level: int = INFO
     auth_password: str = ''
+    auth_salt: bytes = token_bytes()
     comicvine_api_key: str = ''
     api_key: str = ''
 
@@ -72,11 +74,23 @@ class SettingsValues:
     flaresolverr_base_url: str = ''
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            k: v if not isinstance(v, BaseEnum) else v.value
-            for k, v in self.__dict__.items()
-            if not k.startswith('backup_')
-        }
+        result = {}
+        for k, v in self.__dict__.items():
+            if k.startswith('backup_'):
+                continue
+
+            if k == 'auth_salt':
+                continue
+
+            if k == 'auth_password' and v:
+                v = Constants.PASSWORD_REPLACEMENT
+
+            if isinstance(v, BaseEnum):
+                result[k] = v.value
+            else:
+                result[k] = v
+
+        return result
 
 
 @lru_cache(1)
@@ -357,6 +371,16 @@ class Settings(metaclass=Singleton):
 
         if not isinstance(value, SettingsValues.__dataclass_fields__[key].type):
             raise InvalidSettingValue(key, value)
+
+        if key == 'auth_password':
+            if value == Constants.PASSWORD_REPLACEMENT:
+                converted_value = self.sv.auth_password
+
+            elif value:
+                converted_value = hash_password(
+                    self.sv.auth_salt,
+                    value
+                )
 
         if key == 'port' and not 0 < value <= 65_535:
             raise InvalidSettingValue(key, value)
