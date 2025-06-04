@@ -1333,7 +1333,7 @@
 <p>This page covers how Kapowarr handles the rate limits of the services it uses.</p>
 <h2 id="comicvine">ComicVine<a class="headerlink" href="#comicvine" title="Permanent link">&para;</a></h2>
 <p>Hourly, Kapowarr finds the volumes that haven't had a metadata fetch for more than a day. It tries to fetch for as many volumes as possible. If it can't fetch for them all in one go, the ones that didn't get fetched, get preference the next hour.</p>
-<p>With this setup, all volumes (unless you have an absurdly big library) get updated every day and as little as possible requests are made. When we still surpass the limit, the volumes that need to be fetched the most (the ones that haven't been updated for the longest) get preference to ensure that they "keep up". Kapowarr can update at most 25.000 volumes and 25.000 issues per hour.</p>
+<p>With this setup, all volumes (unless you have an absurdly big library) get updated every day and as little as possible requests are made. When we still surpass the limit, the volumes that need to be fetched the most (the ones that haven't been updated for the longest) get preference to ensure that they "keep up". Kapowarr can update at most 25.000 volumes and 25.000 issues per hour. Issues only get updated if Kapowarr detects that a new one has released, and otherwise once every 5 days.</p>
 <h2 id="mega">Mega<a class="headerlink" href="#mega" title="Permanent link">&para;</a></h2>
 <p>If a Mega download reaches the rate limit of the account mid-download (no way to calculate this beforehand), the download is canceled and all other Mega downloads in the download queue are removed. From that point on, Mega downloads are skipped until we can download from it again. Alternative services like MediaFire and GetComics are used instead of Mega while we wait for the limit to go down again. If you have a Mega account that offers higher limits, it's advised to add it at Settings -&gt; Download -&gt; <a href="../../settings/download/#credentials">Credentials</a>, so that Kapowarr can take advantage of it.</p>
 
@@ -1356,7 +1356,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago" title="September 5, 2024 20:37:23 UTC"><span class="timeago" datetime="2024-09-05T20:37:23+00:00" locale="en"></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="September 5, 2024 20:37:23 UTC">2024-09-05</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-timeago" title="June 4, 2025 19:27:06 UTC"><span class="timeago" datetime="2025-06-04T19:27:06+00:00" locale="en"></span></span><span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="June 4, 2025 19:27:06 UTC">2025-06-04</span>
   </span>
 
     
