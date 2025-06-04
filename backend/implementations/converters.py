@@ -86,6 +86,13 @@ def extract_files_from_folder(
             and 'variantcover' not in c.lower().replace(' ', '')
         )
     ]
+
+    if not rel_files:
+        LOGGER.warning(
+            "No relevant files found in folder. Keeping all media files."
+        )
+        rel_files = folder_contents
+
     LOGGER.debug(f'Relevant files: {rel_files}')
 
     # Move remaining files to main folder and delete source folder
