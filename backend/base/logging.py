@@ -3,6 +3,7 @@
 import logging
 import logging.config
 from logging.handlers import RotatingFileHandler
+from os.path import exists, isdir, isfile, join
 from typing import Any, Union
 
 from backend.base.definitions import Constants
@@ -100,10 +101,51 @@ LOGGING_CONFIG = {
 }
 
 
-def setup_logging(do_rollover: bool = True) -> None:
-    "Setup the basic config of the logging module"
+def setup_logging(
+    log_folder: Union[str, None],
+    log_file: Union[str, None],
+    do_rollover: bool = True
+) -> None:
+    """Setup the basic config of the logging module.
 
-    LOGGING_CONFIG["handlers"]["file"]["filename"] = get_log_filepath()
+    Args:
+        log_folder (Union[str, None]): The folder to put the log file in.
+            If `None`, the log file will be in the same folder as the
+            application folder.
+
+        log_file (Union[str, None]): The filename of the log file.
+            If `None`, the default filename will be used.
+
+        do_rollover (bool, optional): Whether to allow the log file to rollover
+            when it reaches the maximum size.
+
+            Defaults to True.
+
+    Raises:
+        ValueError: The given log folder is not a folder.
+    """
+    from backend.base.files import create_folder, folder_path
+
+    if log_folder:
+        if exists(log_folder) and not isdir(log_folder):
+            raise ValueError("Logging folder is not a folder")
+
+        create_folder(log_folder)
+
+    if log_file:
+        if exists(log_file) and not isfile(log_file):
+            raise ValueError("Logging file is not a file")
+    else:
+        log_file = Constants.LOGGER_FILENAME
+
+    if log_folder is None:
+        LOGGING_CONFIG["handlers"]["file"]["filename"] = folder_path(log_file)
+    else:
+        LOGGING_CONFIG["handlers"]["file"]["filename"] = join(
+            log_folder,
+            log_file
+        )
+
     LOGGING_CONFIG["handlers"]["file"]["do_rollover"] = do_rollover
 
     logging.config.dictConfig(LOGGING_CONFIG)
@@ -135,12 +177,12 @@ def setup_logging(do_rollover: bool = True) -> None:
 
 
 def get_log_filepath() -> str:
+    """Get the filepath to the logging file.
+
+    Returns:
+        str: The filepath.
     """
-    Get the filepath to the logging file.
-    Not in a global variable to avoid unnecessary computation.
-    """
-    from backend.base.files import folder_path
-    return folder_path(Constants.LOGGER_FILENAME)
+    return LOGGING_CONFIG["handlers"]["file"]["filename"]
 
 
 def set_log_level(

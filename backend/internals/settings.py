@@ -11,7 +11,7 @@ from backend.base.custom_exceptions import (FolderNotFound, InvalidSettingKey,
                                             InvalidSettingModification,
                                             InvalidSettingValue)
 from backend.base.definitions import (BaseEnum, GCDownloadSource,
-                                      RestartVersion, SeedingHandling)
+                                      SeedingHandling, StartType)
 from backend.base.files import (folder_is_inside_folder,
                                 folder_path, uppercase_drive_letter)
 from backend.base.helpers import (CommaList, Singleton, force_suffix,
@@ -115,6 +115,9 @@ task_intervals = {
 
 
 class Settings(metaclass=Singleton):
+    restart_on_hosting_changes: bool = True
+    "Override this to disable the server restart on hosting changes."
+
     def __init__(self) -> None:
         self._insert_missing_settings()
         self._fetch_settings()
@@ -245,10 +248,10 @@ class Settings(metaclass=Singleton):
 
         LOGGER.info(f'Settings changed: {formatted_data}')
 
-        if hosting_changes:
+        if hosting_changes and self.restart_on_hosting_changes:
             from backend.internals.server import SERVER
             SERVER.restart(
-                RestartVersion.HOSTING_CHANGES
+                StartType.RESTART_HOSTING_CHANGES
             )
 
         return
