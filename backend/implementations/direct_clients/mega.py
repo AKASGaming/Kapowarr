@@ -901,7 +901,7 @@ class MegaFolder(MegaABC):
                         tries_left -= 1
 
                         with Session().get(
-                            f'{self.pure_link}/{size_downloaded}-',
+                            f'{self.pure_link}/{file_size_downloaded}-',
                             stream=True
                         ).raw as r:
 
