@@ -590,7 +590,11 @@ class CredentialData:
 
     def as_dict(self) -> Dict[str, Any]:
         result = asdict(self)
+
         result['source'] = self.source.value
+        if result['password'] is not None:
+            result['password'] = Constants.PASSWORD_REPLACEMENT
+
         return result
 
 
