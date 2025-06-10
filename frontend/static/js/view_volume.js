@@ -760,6 +760,20 @@ usingApiKey()
 
 	document.querySelector('#issue-rename-selector').onclick =
 		e => showRename(api_key, e.target.dataset.issue_id);
+
+	socket.on(
+		'downloaded_status',
+		data => {
+			if (data.volume_id !== volume_id)
+				return;
+			data.downloaded_issues.forEach(
+				issue_id => new IssueEntry(issue_id, api_key).setDownloaded(true)
+			);
+			data.not_downloaded_issues.forEach(
+				issue_id => new IssueEntry(issue_id, api_key).setDownloaded(false)
+			);
+		}
+	);
 });
 
 ViewEls.tool_bar.files.onclick = e => showWindow('files-window');

@@ -77,6 +77,48 @@ class LibraryEntry {
 			};
 		});
 	};
+
+	getProgress() {
+		return this.list_entry.querySelector('.list-prog-num').innerText
+			.split("/")
+			.map(n => parseInt(n));
+	};
+
+	setProgressBar(
+		downloaded_count,
+		total_count
+	) {
+		downloaded_count = Math.min(downloaded_count, total_count);
+		
+		const progress = downloaded_count / total_count * 100;
+		const list_bar = this.list_entry.querySelector('.list-prog-bar'),
+			table_bar = this.table_entry.querySelector('.table-prog-bar');
+
+		this.list_entry.querySelector('.list-prog-num').innerText =
+		this.table_entry.querySelector('.table-prog-num').innerText =
+			`${downloaded_count}/${total_count}`;
+
+		list_bar.style.width =
+		table_bar.style.width =
+			`${progress}%`;
+
+		if (progress === 100)
+			list_bar.style.backgroundColor =
+			table_bar.style.backgroundColor =
+				'var(--success-color)';
+
+		else if (this.list_entry.hasAttribute('monitored'))
+			list_bar.style.backgroundColor =
+			table_bar.style.backgroundColor =
+				'var(--accent-color)';
+
+		else
+			list_bar.style.backgroundColor =
+			table_bar.style.backgroundColor =
+				'var(--error-color)';
+
+		return;
+	};
 };
 
 function populateLibrary(volumes, api_key) {
@@ -125,44 +167,25 @@ function populateLibrary(volumes, api_key) {
 		table_entry.querySelector('.table-volume').innerText =
 			`Volume ${volume.volume_number}`;
 
-		// Progress Bar
-		const progress = (volume.issues_downloaded_monitored
-						/ volume.issue_count_monitored 			* 100);
-		const list_bar = list_entry.querySelector('.list-prog-bar'),
-			table_bar = table_entry.querySelector('.table-prog-bar');
-
-		list_entry.querySelector('.list-prog-num').innerText =
-		table_entry.querySelector('.table-prog-num').innerText =
-			`${volume.issues_downloaded_monitored}/${volume.issue_count_monitored}`;
-
-		list_bar.style.width =
-		table_bar.style.width =
-			`${progress}%`;
-
-		if (progress === 100)
-			list_bar.style.backgroundColor =
-			table_bar.style.backgroundColor =
-				'var(--success-color)';
-
-		else if (volume.monitored === true)
-			list_bar.style.backgroundColor =
-			table_bar.style.backgroundColor =
-				'var(--accent-color)';
-
-		else
-			list_bar.style.backgroundColor =
-			table_bar.style.backgroundColor =
-				'var(--error-color)';
-
 		// Monitored
+		const library_entry = new LibraryEntry(volume.id, api_key);
+		library_entry.list_entry = list_entry;
+		library_entry.table_entry = table_entry;
+
 		const monitored_button = table_entry.querySelector('.table-monitored');
-		monitored_button.onclick = e => new LibraryEntry(volume.id, api_key)
+		monitored_button.onclick = e => library_entry
 			.setMonitored(!volume.monitored);
 		if (volume.monitored) {
 			list_entry.setAttribute('monitored', '');
 			setIcon(monitored_button, icons.monitored, 'Monitored');
 		} else
 			setIcon(monitored_button, icons.unmonitored, 'Unmonitored');
+
+		// Progress Bar
+		library_entry.setProgressBar(
+			volume.issues_downloaded_monitored,
+			volume.issue_count_monitored
+		);
 
 		// Add to view
 		library_els.views.list.insertBefore(list_entry, space_taker);
@@ -331,6 +354,19 @@ usingApiKey()
 				).value
 			}
 		);
+
+	socket.on(
+		'downloaded_status',
+		data => {
+			const inst = new LibraryEntry(data.volume_id, api_key);
+			if (inst.list_entry === null)
+				return;
+			const new_progress = inst.getProgress();
+			new_progress[0] += data.downloaded_issues.length
+							- data.not_downloaded_issues.length;
+			inst.setProgressBar(new_progress[0], new_progress[1])
+		}
+	);
 });
 library_els.search.container.action = 'javascript:searchLibrary();';
 library_els.mass_edit.select_all.onchange =

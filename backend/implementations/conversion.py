@@ -190,7 +190,8 @@ def mass_convert(
     volume_id: int,
     issue_id: Union[int, None] = None,
     filepath_filter: List[str] = [],
-    update_websocket: bool = False
+    update_websocket_progress: bool = False,
+    update_websocket_files: bool = False
 ) -> List[str]:
     """Convert files for a volume or issue.
 
@@ -204,8 +205,12 @@ def mass_convert(
         mentioned in this list.
             Defaults to [].
 
-        update_websocket (bool, optional): Send task progress updates over
-        the websocket.
+        update_websocket_progress (bool, optional): Send task progress updates
+        over the websocket.
+            Defaults to False.
+
+        update_websocket_files (bool, optional): Send updates on the download
+        status of issues over the websocket.
             Defaults to False.
 
     Returns:
@@ -259,7 +264,7 @@ def mass_convert(
         # Commit changes because new connections are opened in the processes
         commit()
         with PortablePool(max_processes=total_count) as pool:
-            if update_websocket:
+            if update_websocket_progress:
                 ws = WebSocket()
                 ws.update_task_status(
                     message=f'Converted 0/{total_count}'
@@ -279,6 +284,6 @@ def mass_convert(
                     planned_conversions
                 ))
 
-    scan_files(volume_id)
+    scan_files(volume_id, update_websocket=update_websocket_files)
 
     return result

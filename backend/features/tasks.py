@@ -208,7 +208,8 @@ class MassConvertIssue(Task):
             self._volume_id,
             self._issue_id,
             filepath_filter=self.filepath_filter,
-            update_websocket=True
+            update_websocket_progress=True,
+            update_websocket_files=True
         )
 
         return
@@ -291,7 +292,7 @@ class RefreshAndScanVolume(Task):
         WebSocket().update_task_status(self)
 
         try:
-            refresh_and_scan(self._volume_id)
+            refresh_and_scan(self._volume_id, update_websocket=True)
         except InvalidComicVineApiKey:
             pass
 
@@ -388,7 +389,8 @@ class MassConvertVolume(Task):
         mass_convert(
             self._volume_id,
             filepath_filter=self.filepath_filter,
-            update_websocket=True
+            update_websocket_progress=True,
+            update_websocket_files=True
         )
 
         return
