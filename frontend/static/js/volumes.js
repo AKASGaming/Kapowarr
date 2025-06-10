@@ -36,7 +36,8 @@ const library_els = {
 		button: document.querySelector('#massedit-button'),
 		toggle: document.querySelector('#massedit-toggle'),
 		select_all: document.querySelector('#selectall-input'),
-		cancel: document.querySelector('#cancel-massedit')
+		cancel: document.querySelector('#cancel-massedit'),
+		progress: document.querySelector("#massedit-progress")
 	}
 };
 
@@ -170,6 +171,7 @@ function populateLibrary(volumes, api_key) {
 };
 
 function fetchLibrary(api_key) {
+	library_els.mass_edit.progress.innerText = '';
 	showLibraryPage(library_els.pages.loading);
 
 	const params = {
@@ -243,6 +245,11 @@ const lib_options = getLocalStorage('lib_sorting', 'lib_view', 'lib_filter');
 library_els.view_options.sort.value = lib_options.lib_sorting;
 library_els.view_options.view.value = lib_options.lib_view;
 library_els.view_options.filter.value = lib_options.lib_filter;
+
+socket.on(
+	'mass_editor_status',
+	data => library_els.mass_edit.progress.innerText = `${data.current_item}/${data.total_items}`
+);
 
 usingApiKey()
 .then(api_key => {

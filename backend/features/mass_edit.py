@@ -14,6 +14,7 @@ from backend.implementations.naming import mass_rename
 from backend.implementations.root_folders import RootFolders
 from backend.implementations.volumes import Volume, refresh_and_scan
 from backend.internals.db import iter_commit
+from backend.internals.server import WebSocket
 
 
 class MassEditorDelete(MassEditorAction):
@@ -26,11 +27,21 @@ class MassEditorDelete(MassEditorAction):
 
         LOGGER.info(f'Using mass editor, deleting volumes: {self.volume_ids}')
 
-        for volume_id in iter_commit(self.volume_ids):
+        ws = WebSocket()
+        total_items = len(self.volume_ids)
+
+        for item_index, volume_id in enumerate(iter_commit(self.volume_ids)):
+            ws.update_mass_editor_status(
+                self.identifier,
+                item_index + 1,
+                total_items
+            )
+
             try:
                 Volume(volume_id).delete(delete_volume_folder)
             except VolumeDownloadedFor:
                 continue
+
         return
 
 
@@ -50,7 +61,16 @@ class MassEditorRootFolder(MassEditorAction):
             f'Using mass editor, settings root folder to {root_folder_id} for volumes: {self.volume_ids}'
         )
 
-        for volume_id in iter_commit(self.volume_ids):
+        ws = WebSocket()
+        total_items = len(self.volume_ids)
+
+        for item_index, volume_id in enumerate(iter_commit(self.volume_ids)):
+            ws.update_mass_editor_status(
+                self.identifier,
+                item_index + 1,
+                total_items
+            )
+
             Volume(volume_id).change_root_folder(root_folder_id)
 
         return
@@ -61,8 +81,19 @@ class MassEditorRename(MassEditorAction):
 
     def run(self, **kwargs) -> None:
         LOGGER.info(f'Using mass editor, renaming volumes: {self.volume_ids}')
-        for volume_id in iter_commit(self.volume_ids):
+
+        ws = WebSocket()
+        total_items = len(self.volume_ids)
+
+        for item_index, volume_id in enumerate(iter_commit(self.volume_ids)):
+            ws.update_mass_editor_status(
+                self.identifier,
+                item_index + 1,
+                total_items
+            )
+
             mass_rename(volume_id)
+
         return
 
 
@@ -71,8 +102,19 @@ class MassEditorUpdate(MassEditorAction):
 
     def run(self, **kwargs) -> None:
         LOGGER.info(f'Using mass editor, updating volumes: {self.volume_ids}')
-        for volume_id in iter_commit(self.volume_ids):
+
+        ws = WebSocket()
+        total_items = len(self.volume_ids)
+
+        for item_index, volume_id in enumerate(iter_commit(self.volume_ids)):
+            ws.update_mass_editor_status(
+                self.identifier,
+                item_index + 1,
+                total_items
+            )
+
             refresh_and_scan(volume_id)
+
         return
 
 
@@ -83,9 +125,18 @@ class MassEditorSearch(MassEditorAction):
         LOGGER.info(
             f'Using mass editor, auto searching for volumes: {self.volume_ids}'
         )
-        download_handler = DownloadHandler()
 
-        for volume_id in self.volume_ids:
+        download_handler = DownloadHandler()
+        ws = WebSocket()
+        total_items = len(self.volume_ids)
+
+        for item_index, volume_id in enumerate(self.volume_ids):
+            ws.update_mass_editor_status(
+                self.identifier,
+                item_index + 1,
+                total_items
+            )
+
             search_results = auto_search(volume_id)
             download_handler.add_multiple(
                 (result['link'], volume_id, None, False)
@@ -100,8 +151,19 @@ class MassEditorConvert(MassEditorAction):
 
     def run(self, **kwargs) -> None:
         LOGGER.info(
-            f'Using mass editor, converting for volumes: {self.volume_ids}')
-        for volume_id in iter_commit(self.volume_ids):
+            f'Using mass editor, converting for volumes: {self.volume_ids}'
+        )
+
+        ws = WebSocket()
+        total_items = len(self.volume_ids)
+
+        for item_index, volume_id in enumerate(iter_commit(self.volume_ids)):
+            ws.update_mass_editor_status(
+                self.identifier,
+                item_index + 1,
+                total_items
+            )
+
             mass_convert(volume_id)
         return
 
@@ -111,9 +173,12 @@ class MassEditorUnmonitor(MassEditorAction):
 
     def run(self, **kwargs) -> None:
         LOGGER.info(
-            f'Using mass editor, unmonitoring volumes: {self.volume_ids}')
+            f'Using mass editor, unmonitoring volumes: {self.volume_ids}'
+        )
+
         for volume_id in self.volume_ids:
             Volume(volume_id)['monitored'] = False
+
         return
 
 
@@ -122,8 +187,10 @@ class MassEditorMonitor(MassEditorAction):
 
     def run(self, **kwargs) -> None:
         LOGGER.info(f'Using mass editor, monitoring volumes: {self.volume_ids}')
+
         for volume_id in self.volume_ids:
             Volume(volume_id)['monitored'] = True
+
         return
 
 

@@ -283,6 +283,8 @@ class SocketEvent(BaseEnum):
     QUEUE_STATUS = 'queue_status'
     QUEUE_ENDED = 'queue_ended'
 
+    MASS_EDITOR_STATUS = 'mass_editor_status'
+
 
 class FailReason(BaseEnum):
     BROKEN = 'GetComics page unavailable'
