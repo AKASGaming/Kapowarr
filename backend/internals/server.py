@@ -6,12 +6,15 @@ Setting up, running and shutting down the API and web-ui
 
 from __future__ import annotations
 
+from multiprocessing import SimpleQueue
 from os import urandom
 from threading import Thread, Timer, current_thread
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Union
+from typing import (TYPE_CHECKING, Any, Callable, Dict,
+                    Iterable, List, Mapping, Union)
 
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO
+from socketio import PubSubManager
 from waitress.server import create_server
 from waitress.task import ThreadedTaskDispatcher as TTD
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
@@ -143,12 +146,13 @@ class Server(metaclass=Singleton):
         app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
         app.config['JSON_SORT_KEYS'] = False
 
-        ws = WebSocket()
-        ws.init_app(
+        self.ws = WebSocket()
+        self.ws.init_app(
             app,
             path=f'{self.api_prefix}/socket.io',
             cors_allowed_origins='*',
-            async_mode='threading'
+            async_mode='threading',
+            client_manager=MPWebSocketQueue(SimpleQueue(), write_only=False)
         )
 
         # Add error handlers
@@ -327,7 +331,37 @@ class Server(metaclass=Singleton):
         return t
 
 
+class MPWebSocketQueue(PubSubManager):
+    name = 'mp_queue'
+
+    def __init__(
+        self,
+        queue: SimpleQueue[Dict[str, Any]],
+        write_only: bool = False,
+        channel='flask-socketio',
+        logger=None
+    ) -> None:
+        super().__init__(channel, write_only, logger)
+        self.queue = queue
+        return
+
+    def _publish(self, data: Dict[str, Any]):
+        self.queue.put(data)
+        return
+
+    def _listen(self):
+        while True:
+            result = self.queue.get()
+            yield result
+
+
 class WebSocket(SocketIO, metaclass=Singleton):
+    server_options: dict
+
+    @property
+    def client_manager(self) -> MPWebSocketQueue:
+        return self.server_options['client_manager']
+
     def send_task_added(self, task: Task) -> None:
         """Send a message stating a task that has been added
         to the queue.
@@ -343,6 +377,28 @@ class WebSocket(SocketIO, metaclass=Singleton):
                 'issue_id': task.issue_id
             }
         )
+        return
+
+    def emit( # type: ignore
+        self,
+        event: str,
+        data: Dict[str, Any]
+    ) -> None:
+        cm = self.client_manager
+
+        if not cm.write_only:
+            super().emit(event, data)
+        else:
+            message = {
+                'method': 'emit',
+                'event': event,
+                'data': data,
+                'namespace': '/',
+                'host_id': cm.host_id
+            }
+            cm._handle_emit(message)
+            cm._publish(message)
+
         return
 
     def send_task_ended(self, task: Task) -> None:
@@ -470,12 +526,15 @@ def setup_process(
     log_level: int,
     log_folder: Union[str, None],
     log_file: Union[str, None],
-    db_folder: Union[str, None]
+    db_folder: Union[str, None],
+    ws_queue: SimpleQueue
 ) -> Callable[[], AppContext]:
     setup_logging(log_folder, log_file, do_rollover=False)
     set_log_level(log_level)
     set_db_location(db_folder)
     setup_db_adapters_and_converters()
+
+    WebSocket(client_manager=MPWebSocketQueue(ws_queue, write_only=True))
 
     app = Flask(__name__)
     app.teardown_appcontext(close_db)

@@ -30,6 +30,7 @@ from backend.base.definitions import Constants, T, U
 from backend.base.logging import LOGGER, get_log_filepath
 
 if TYPE_CHECKING:
+    from multiprocessing import SimpleQueue
     from multiprocessing.pool import IMapIterator
 
 
@@ -815,13 +816,18 @@ class _ContextKeeper(metaclass=Singleton):
         log_level: Union[int, None] = None,
         log_folder: Union[str, None] = None,
         log_file: Union[str, None] = None,
-        db_folder: Union[str, None] = None
+        db_folder: Union[str, None] = None,
+        ws_queue: Union[SimpleQueue[Dict[str, Any]], None] = None
     ) -> None:
-        if not log_level:
+        if not (log_level and ws_queue):
             return
 
         from backend.internals.server import setup_process
-        self.ctx = setup_process(log_level, log_folder, log_file, db_folder)
+        self.ctx = setup_process(
+            log_level, log_folder, log_file,
+            db_folder,
+            ws_queue
+        )
         return
 
 
@@ -856,6 +862,7 @@ class PortablePool(Pool):
             Give `None` for default which is CPU count. Defaults to None.
         """
         from backend.internals.db import DBConnection
+        from backend.internals.server import WebSocket
 
         log_file = get_log_filepath()
         super().__init__(
@@ -869,7 +876,8 @@ class PortablePool(Pool):
                 LOGGER.root.level,
                 dirname(log_file),
                 basename(log_file),
-                dirname(DBConnection.file)
+                dirname(DBConnection.file),
+                WebSocket().client_manager.queue
             )
         )
         return
