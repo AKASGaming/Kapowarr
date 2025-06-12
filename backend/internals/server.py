@@ -12,6 +12,8 @@ from threading import Thread, Timer, current_thread
 from typing import (TYPE_CHECKING, Any, Callable, Dict,
                     Iterable, List, Mapping, Union)
 
+from engineio.server import Server as IOServer
+from engineio.socket import Socket as IOSocket
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO
 from socketio import PubSubManager
@@ -115,6 +117,26 @@ def diffuse_timers() -> None:
     return
 
 
+def _set_websocket_threads_names() -> None:
+    """Monkey patch some websocket methods to give the resulting threads
+    a better name. Helps to identify threads when debugging.
+    """
+    original_handle_request = IOServer.handle_request
+
+    def schedule_ping(self):
+        t = self.server.start_background_task(self._send_ping)
+        t.name = "WebSocketPingerThread"
+
+    def handle_request(self, environ, start_response):
+        result = original_handle_request(self, environ, start_response)
+        self.service_task_handle.name = "WebSocketHandlerThread"
+        return result
+
+    IOSocket.schedule_ping = schedule_ping
+    IOServer.handle_request = handle_request
+    return
+
+
 class Server(metaclass=Singleton):
     api_prefix = "/api"
 
@@ -146,6 +168,7 @@ class Server(metaclass=Singleton):
         app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
         app.config['JSON_SORT_KEYS'] = False
 
+        _set_websocket_threads_names()
         self.ws = WebSocket()
         self.ws.init_app(
             app,
@@ -344,6 +367,11 @@ class MPWebSocketQueue(PubSubManager):
         super().__init__(channel, write_only, logger)
         self.queue = queue
         return
+
+    def initialize(self):
+        super().initialize()
+        if not self.write_only:
+            self.thread.name = "WebSocketQueueThread"
 
     def _publish(self, data: Dict[str, Any]):
         self.queue.put(data)

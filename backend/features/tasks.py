@@ -584,7 +584,7 @@ class TaskHandler(metaclass=Singleton):
             'thread': Thread(
                 target=self.__run_task,
                 args=(task,),
-                name="Task Handler"
+                name=f"TaskThread-{id}"
             )
         }
         self.queue.append(task_data)
@@ -649,9 +649,8 @@ class TaskHandler(metaclass=Singleton):
         timedelta = next_run - round(time()) + 1
         LOGGER.debug(f'Next interval task is in {timedelta} seconds')
 
-        # Create sleep thread for that time and that will run
-        # self.__check_intervals.
         self.task_interval_waiter = Timer(timedelta, self.__check_intervals)
+        self.task_interval_waiter.name = "TaskIntervalThread"
         self.task_interval_waiter.start()
         return
 
