@@ -453,6 +453,9 @@ function addVolume() {
 			if (e.status === 509) {
 				SearchEls.window.submit.innerText = 'ComicVine API rate limit reached';
 				showWindow("add-window");
+			} else if (e.status === 400) {
+				SearchEls.window.submit.innerText = 'Volume folder is parent or child of other volume folder';
+				showWindow("add-window");
 			} else
 				console.log(e);
 		});

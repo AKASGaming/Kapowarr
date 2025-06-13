@@ -51,6 +51,11 @@ class VolumeNotMatched(CustomException):
     api_response = {'error': 'VolumeNotMatched', 'result': {}, 'code': 400}
 
 
+class VolumeFolderInvalid(CustomException):
+    """The volume folder is a parent or child of an existing volume folder, which is not allowed"""
+    api_response = {'error': 'VolumeFolderInvalid', 'result': {}, 'code': 400}
+
+
 class CVRateLimitReached(CustomException):
     """ComicVine API rate limit reached"""
     api_response = {'error': 'CVRateLimitReached', 'result': {}, 'code': 509}

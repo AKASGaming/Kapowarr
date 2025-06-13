@@ -6,7 +6,9 @@ from itertools import chain
 from os.path import abspath, basename, dirname, isfile, splitext
 from typing import Any, Dict, List, Union
 
-from backend.base.custom_exceptions import InvalidKeyValue, VolumeAlreadyAdded
+from backend.base.custom_exceptions import (InvalidKeyValue,
+                                            VolumeAlreadyAdded,
+                                            VolumeFolderInvalid)
 from backend.base.definitions import (CONTENT_EXTENSIONS, CVFileMapping,
                                       FileConstants, FilenameData,
                                       MonitorScheme, SpecialVersion)
@@ -208,6 +210,11 @@ def import_library(
             # (it isn't because otherwise it wouldn't pop up in LI).
             # That would mean that the file is actually not
             # for that volume so skip.
+            continue
+
+        except VolumeFolderInvalid:
+            # The volume folder is inside another volume folder.
+            # TODO: We should report this back to the user.
             continue
 
         if rename_files:

@@ -28,6 +28,7 @@ from backend.base.custom_exceptions import (BlocklistEntryNotFound,
                                             TaskNotDeletable, TaskNotFound,
                                             VolumeAlreadyAdded,
                                             VolumeDownloadedFor,
+                                            VolumeFolderInvalid,
                                             VolumeNotFound)
 from backend.base.definitions import (BlocklistReason, BlocklistReasonID,
                                       CredentialData, CredentialSource,
@@ -104,6 +105,7 @@ def error_handler(method) -> Any:
             TaskNotDeletable, TaskNotFound,
             VolumeAlreadyAdded,
             VolumeDownloadedFor,
+            VolumeFolderInvalid,
             VolumeNotFound
         ) as e:
             return return_api(**e.api_response)

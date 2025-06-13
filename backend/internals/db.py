@@ -74,6 +74,17 @@ class KapowarrCursor(Cursor):
             return r
         return r[0]
 
+    def __enter__(self):
+        self.connection.isolation_level = None
+        self.execute("BEGIN TRANSACTION;")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.connection.in_transaction:
+            self.execute("COMMIT;")
+        self.connection.isolation_level = ""
+        return
+
 
 class DBConnectionManager(type):
     instances: Dict[int, DBConnection] = {}
@@ -204,6 +215,12 @@ def get_db(force_new: bool = False) -> KapowarrCursor:
 def commit() -> None:
     """Commit the database"""
     get_db().connection.commit()
+    return
+
+
+def rollback() -> None:
+    """Rollback uncommited changes in the database"""
+    get_db().connection.rollback()
     return
 
 
