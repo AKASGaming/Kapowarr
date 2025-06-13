@@ -10,7 +10,8 @@ from os.path import basename, exists, isfile, join, splitext
 from time import time
 from typing import TYPE_CHECKING
 
-from backend.base.definitions import SCANNABLE_EXTENSIONS, BlocklistReason
+from backend.base.definitions import (SCANNABLE_EXTENSIONS,
+                                      BlocklistReason, DownloadState)
 from backend.base.files import (copy_directory, delete_file_folder,
                                 rename_file, set_detected_extension)
 from backend.base.logging import LOGGER
@@ -52,12 +53,12 @@ def add_to_history(download: Download) -> None:
             web_link, web_title, web_sub_title,
             file_title,
             volume_id, issue_id,
-            source, downloaded_at
+            source, downloaded_at, success
         ) VALUES (
             :web_link, :web_title, :web_sub_title,
             :file_title,
             :volume_id, :issue_id,
-            :source, :downloaded_at
+            :source, :downloaded_at, :success
         );
         """,
         {
@@ -68,7 +69,8 @@ def add_to_history(download: Download) -> None:
             'volume_id': download.volume_id,
             'issue_id': download.issue_id,
             'source': download.source_type.value,
-            'downloaded_at': round(time())
+            'downloaded_at': round(time()),
+            'success': download.state != DownloadState.FAILED_STATE
         }
     )
     return

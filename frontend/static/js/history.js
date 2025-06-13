@@ -41,7 +41,11 @@ function fillHistory(api_key) {
 
 			let d = new Date(obj.downloaded_at * 1000);
 			let formatted_date = d.toLocaleString('en-CA').slice(0,10) + ' ' + d.toTimeString().slice(0,5);
-			entry.querySelector('td:last-child').innerText = formatted_date;
+			entry.querySelector('td:nth-child(4)').innerText = formatted_date;
+			
+			if (obj.success !== null)
+				entry.querySelector('td:nth-child(5)').innerText =
+					obj.success ? 'Success' : 'Failed';
 
 			HistoryEls.table.appendChild(entry);
 		});
