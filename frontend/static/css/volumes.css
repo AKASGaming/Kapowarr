@@ -146,6 +146,9 @@ main:has(#massedit-toggle:checked) #library-container {
 	position: absolute;
 	inset: 0;
 	background-color: var(--error-color);
+	
+	transition: width 150ms ease-in-out,
+				background-color 150ms ease-in-out;
 }
 
 .list-prog-num,
