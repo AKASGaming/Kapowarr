@@ -18,15 +18,31 @@
 
 .task-interval-table {
 	min-width: 33.2rem;
-	table-layout: fixed;
 }
 
-.task-interval-table tr > :not(:first-child) {
+.task-interval-table tr > .name-column {
+	min-width: 6rem;
+}
+
+.task-interval-table tr > :where(.interval-column, .prev-column, .next-column) {
 	width: 8.5rem;
+}
+
+.task-interval-table tr > .run-column {
+	width: 4rem;
 }
 
 .task-interval-table tr > td {
 	border-top: 1px solid var(--border-color);
+}
+
+.task-entry button {
+	height: 2rem;
+	padding: .4rem;
+}
+
+.task-entry button img {
+	height: 100%;
 }
 
 table {

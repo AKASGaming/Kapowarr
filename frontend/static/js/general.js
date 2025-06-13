@@ -88,8 +88,7 @@ const images = {
 //
 const task_to_button = {};
 function mapButtons(id) {
-	if (window.location.pathname === '/' ||
-		window.location.pathname === (url_base + '/')) {
+	if (window.location.pathname === (url_base + '/')) {
 		task_to_button['search_all'] = {
 			'button': document.querySelector('#searchall-button'),
 			'icon': `${url_base}/static/img/search.svg`,
@@ -100,6 +99,15 @@ function mapButtons(id) {
 			'icon': `${url_base}/static/img/refresh.svg`,
 			'loading_icon': `${url_base}/static/img/loading.svg`
 		};
+
+	} else if (window.location.pathname === (url_base + '/system/tasks')) {
+		document.querySelectorAll('.task-interval-table > tbody > tr').forEach(entry => {
+			task_to_button[entry.dataset.task_name] = {
+				'button': entry.querySelector('button'),
+				'icon': `${url_base}/static/img/refresh.svg`,
+				'loading_icon': `${url_base}/static/img/loading.svg`
+			};
+		});
 
 	} else if (id !== null) {
 		task_to_button[`refresh_and_scan#${id}`] = {

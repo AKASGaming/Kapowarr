@@ -29,19 +29,23 @@ function fillPlanning(api_key) {
 	fetchAPI('/system/tasks/planning', api_key)
 	.then(json => {
 		TaskEls.intervals.innerHTML = '';
-		json.result.forEach(e => {
+		json.result.forEach(task => {
 			const entry = TaskEls.pre_build.task.cloneNode(true);
+			entry.dataset.task_name = task.task_name;
 
-			entry.querySelector('.name-column').innerText = e.display_name;
+			entry.querySelector('.name-column').innerText = task.display_name;
 			entry.querySelector('.interval-column').innerText =
-				convertInterval(e.interval);
+				convertInterval(task.interval);
 			entry.querySelector('.prev-column').innerText =
-				convertTime(e.last_run, false);
+				convertTime(task.last_run, false);
 			entry.querySelector('.next-column').innerText =
-				convertTime(e.next_run, true);
+				convertTime(task.next_run, true);
+			entry.querySelector('button').onclick =
+				e => sendAPI('POST', '/system/tasks', api_key, {}, {'cmd': task.task_name})
 
 			TaskEls.intervals.appendChild(entry);
 		});
+		mapButtons();
 	});
 };
 

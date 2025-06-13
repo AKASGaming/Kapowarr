@@ -14,6 +14,9 @@
 	<td class="interval-column"></td>
 	<td class="prev-column"></td>
 	<td class="next-column"></td>
+	<td class="run-column">
+		{{ icon_button("", "Run the task", "refresh.svg") }}
+	</td>
 </tr>
 <tr class="history-entry">
 	<td class="title-column"></td>
@@ -32,13 +35,14 @@
 	<div class="main-window">
 		<h2>Scheduled</h2>
 		<div class="task-interval-container">
-		<table class="task-interval-table">
+		<table class="task-interval-table icon-text-color">
 			<thead>
 				<tr>
 					<th>Name</th>
 					<th>Interval</th>
 					<th>Last Execution</th>
 					<th>Next Execution</th>
+					<th>Run</th>
 				</tr>
 			</thead>
 			<tbody id="task-intervals"></tbody>
