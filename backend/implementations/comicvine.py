@@ -470,6 +470,7 @@ class ComicVine:
         LOGGER.debug(f'Fetching volume data for {formatted_cv_ids}')
 
         volume_infos = []
+        batch_brake_time = Constants.CV_BRAKE_TIME * 10
         async with AsyncSession() as session:
             # 10 requests of 100 vol per round
             for request_batch in batched(formatted_cv_ids, 1000):
@@ -477,8 +478,8 @@ class ComicVine:
                 if request_batch[0] != formatted_cv_ids[0]:
                     # From second round on
                     LOGGER.debug(
-                        f"Waiting {Constants.CV_BRAKE_TIME}s to keep the CV rate limit happy")
-                    await sleep(Constants.CV_BRAKE_TIME)
+                        f"Waiting {batch_brake_time}s to keep the CV rate limit happy")
+                    await sleep(batch_brake_time)
 
                 # Fetch 10 batches of 100 volumes
                 tasks = [
@@ -540,6 +541,7 @@ class ComicVine:
         LOGGER.debug(f'Fetching issue data for volumes {formatted_cv_ids}')
 
         issue_infos = []
+        batch_brake_time = Constants.CV_BRAKE_TIME * 10
         async with AsyncSession() as session:
             for id_batch in batched(formatted_cv_ids, 50):
                 try:
@@ -568,8 +570,8 @@ class ComicVine:
                         if offset_batch[0] != 100:
                             # From second round on
                             LOGGER.debug(
-                                f"Waiting {Constants.CV_BRAKE_TIME}s to keep the CV rate limit happy")
-                            await sleep(Constants.CV_BRAKE_TIME)
+                                f"Waiting {batch_brake_time}s to keep the CV rate limit happy")
+                            await sleep(batch_brake_time)
 
                         tasks = [
                             self.__call_api(

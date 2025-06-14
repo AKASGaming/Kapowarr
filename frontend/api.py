@@ -32,7 +32,7 @@ from backend.base.custom_exceptions import (BlocklistEntryNotFound,
                                             VolumeNotFound)
 from backend.base.definitions import (BlocklistReason, BlocklistReasonID,
                                       CredentialData, CredentialSource,
-                                      DownloadSource, LibraryFilters,
+                                      DownloadSource, LibraryFilter,
                                       LibrarySorting, MonitorScheme,
                                       SpecialVersion, VolumeData)
 from backend.base.helpers import hash_password
@@ -163,7 +163,7 @@ def extract_key(request, key: str, check_existence: bool = True) -> Any:
 
         elif key == 'filter':
             try:
-                value = LibraryFilters[value.upper()] if value else None
+                value = LibraryFilter[value.upper()] if value else None
             except KeyError:
                 raise InvalidKeyValue(key, value)
 
@@ -907,7 +907,7 @@ def api_delete_download(download_id: int):
     download_handler = DownloadHandler()
 
     if request.method == 'GET':
-        result = download_handler.get_one(download_id).todict()
+        result = download_handler.get_one(download_id).as_dict()
         return return_api(result)
 
     elif request.method == 'PUT':

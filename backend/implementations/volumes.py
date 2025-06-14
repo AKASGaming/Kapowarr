@@ -22,7 +22,7 @@ from backend.base.custom_exceptions import (InvalidKeyValue, IssueNotFound,
 from backend.base.definitions import (SCANNABLE_EXTENSIONS, Constants,
                                       FileData, GeneralFileData,
                                       GeneralFileType, IssueData,
-                                      LibraryFilters, LibrarySorting,
+                                      LibraryFilter, LibrarySorting,
                                       MonitorScheme, SpecialVersion,
                                       VolumeData)
 from backend.base.file_extraction import extract_filename_data
@@ -784,7 +784,7 @@ class Volume:
 class Library:
     def get_public_volumes(self,
         sort: LibrarySorting = LibrarySorting.TITLE,
-        filter: Union[LibraryFilters, int, None] = None
+        filter: Union[LibraryFilter, int, None] = None
     ) -> List[dict]:
         """Get all volumes in the library
 
@@ -792,14 +792,14 @@ class Library:
             sort (LibrarySorting, optional): How to sort the list.
                 Defaults to LibrarySorting.TITLE.
 
-            filter (Union[LibraryFilters, None], optional): Apply a filter to
+            filter (Union[LibraryFilter, None], optional): Apply a filter to
             the list if not `None`.
                 Defaults to None.
 
         Returns:
             List[dict]: The list of volumes in the library.
         """
-        if isinstance(filter, LibraryFilters):
+        if isinstance(filter, LibraryFilter):
             sql_filter = filter.value
         elif isinstance(filter, int):
             sql_filter = f"WHERE comicvine_id = {filter}"
@@ -854,7 +854,7 @@ class Library:
     def search(self,
         query: str,
         sort: LibrarySorting = LibrarySorting.TITLE,
-        filter: Union[LibraryFilters, None] = None
+        filter: Union[LibraryFilter, None] = None
     ) -> List[dict]:
         """Search in the library with a query.
 

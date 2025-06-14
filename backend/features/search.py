@@ -3,9 +3,9 @@
 from asyncio import gather, run
 from typing import Dict, List, Tuple, Union
 
-from backend.base.definitions import (MatchedSearchResultData,
+from backend.base.definitions import (QUERY_FORMATS, MatchedSearchResultData,
                                       SearchResultData, SearchSource,
-                                      SpecialVersion, query_formats)
+                                      SpecialVersion)
 from backend.base.helpers import (AsyncSession, check_overlapping_issues,
                                   create_range, extract_year_from_date,
                                   get_subclasses)
@@ -211,16 +211,16 @@ def manual_search(
             continue
 
         if volume_data.special_version == SpecialVersion.TPB:
-            formats = query_formats["TPB"]
+            formats = QUERY_FORMATS["TPB"]
 
         elif volume_data.special_version == SpecialVersion.VOLUME_AS_ISSUE:
-            formats = query_formats["VAI"]
+            formats = QUERY_FORMATS["VAI"]
 
         elif issue_number is None:
-            formats = query_formats["Volume"]
+            formats = QUERY_FORMATS["Volume"]
 
         else:
-            formats = query_formats["Issue"]
+            formats = QUERY_FORMATS["Issue"]
 
         if volume_data.year is None:
             formats = tuple(

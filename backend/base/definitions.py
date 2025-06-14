@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Definitions of basic types, abstract classes, enums, etc.
+Definitions of types, constants, enums, typed dicts, dataclasses
+and abstract classes.
 """
 
 from __future__ import annotations
@@ -23,87 +24,133 @@ U = TypeVar("U")
 
 # region Constants
 class Constants:
-    SUB_PROCESS_TIMEOUT = 20.0
+    SUB_PROCESS_TIMEOUT = 20.0 # seconds
+    "Seconds to wait after interrupt until subprocess is killed"
 
     HOSTING_THREADS = 10
+    "Amount of threads for the webserver"
+
     HOSTING_TIMER_DURATION = 60.0 # seconds
+    """
+    Seconds to wait after restarting from hosting changes
+    until they are reverted
+    """
 
     DB_FOLDER = ("db",)
+    "Subfolder of application folder to put database in"
+
     DB_NAME = "Kapowarr.db"
+    "Name of database file itself"
+
     DB_TIMEOUT = 10.0 # seconds
+    "Seconds to wait on database command before timing out"
+
     DB_MAX_CONCURRENT_CONNECTIONS = 32
+    "Maximum allowed database connections to be open at the same time"
 
     LOGGER_NAME = "Kapowarr"
-    LOGGER_FILENAME = "Kapowarr.log"
+    "Name of the logger that is used"
 
-    PASSWORD_REPLACEMENT: str = '********'
+    LOGGER_FILENAME = "Kapowarr.log"
+    "Filename that the logs are put in"
+
+    PASSWORD_REPLACEMENT: str = "********"
+    "What passwords are replaced with when shared as a string"
 
     MAX_FILENAME_LENGTH = 255
+    "The maximum amount of characters that a filename is allowed to be"
 
-    ARCHIVE_EXTRACT_FOLDER = '.archive_extract'
-    ZIP_MIN_MOD_TIME = 315619200
+    ARCHIVE_EXTRACT_FOLDER = ".archive_extract"
+    "The subfolder to extract archives into temporarily"
+
+    ZIP_MIN_MOD_TIME = 315619200 # epoch
+    "The minimum modification time that a file inside a zip should have"
+
     RAR_EXECUTABLES = {
-        'linux': 'rar_linux_64',
-        'darwin': 'rar_bsd_64',
-        'win32': 'rar_windows_64.exe'
+        "linux": "rar_linux_64",
+        "darwin": "rar_bsd_64",
+        "win32": "rar_windows_64.exe"
     }
+    "A mapping of the OS to the rar executable to use"
 
     DEFAULT_USERAGENT = "Kapowarr"
+    "The user agent to use when making web requests"
+
     BROWSER_USERAGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+    "The user agent to use when making web requests as a browser"
+
     TOTAL_RETRIES = 5
+    "The amount of times to try a network connection before giving up"
+
     BACKOFF_FACTOR_RETRIES = 0.1
+    "Backoff factor for waiting in-between retries"
+
     STATUS_FORCELIST_RETRIES = (500, 502, 503, 504)
+    "The HTTP status codes for which a retry should be done"
 
     CV_SITE_URL = "https://comicvine.gamespot.com"
+    "The base URL of ComicVine"
+
     CV_API_URL = "https://comicvine.gamespot.com/api"
-    CV_BRAKE_TIME = 10.0 # seconds
+    "The base URL of the ComicVine API"
+
+    CV_BRAKE_TIME = 1.0 # seconds
+    "Average amount of seconds between requests to the CV API"
 
     GC_SITE_URL = "https://getcomics.org"
+    "The base URL of GetComics"
+
     GC_SOURCE_TERM = "GetComics"
+    "The name used for GetComics as a download source"
 
     MEGA_API_URL = "https://eu.api.mega.co.nz/cs"
+    "The base URL of the Mega API"
 
     PIXELDRAIN_API_URL = "https://pixeldrain.com/api"
-    PIXELDRAIN_WEBSOCKET_URL = "wss://pixeldrain.com/api"
+    "The base URL of the Pixeldrain API"
 
     FS_API_BASE = "/v1"
+    "The base endpoint of the FlareSolverr API"
+
     CF_CHALLENGE_HEADER = ("cf-mitigated", "challenge")
+    """
+    The key and value of the header supplied by CloudFlare
+    when a challenge is presented
+    """
 
     TORRENT_UPDATE_INTERVAL = 5 # seconds
+    "The interval in seconds between status updates from external clients"
+
     TORRENT_TAG = "kapowarr"
+    "The tag to give to downloads at external clients"
 
 
 class FileConstants:
-    IMAGE_EXTENSIONS = ('.png', '.jpeg', '.jpg', '.webp', '.gif',
-                        '.PNG', '.JPEG', '.JPG', '.WEBP', '.GIF')
-    "Image extensions, with dot-prefix, and with both lowercase and uppercase"
+    IMAGE_EXTENSIONS = (
+        ".png", ".jpeg", ".jpg", ".webp", ".gif",
+        ".PNG", ".JPEG", ".JPG", ".WEBP", ".GIF"
+    )
+    "Image extensions, both lowercase and uppercase, with dot-prefix"
 
     CONTAINER_EXTENSIONS = (
-        '.cbz', '.zip', '.rar', '.cbr', '.tar.gz',
-        '.7zip', '.7z', '.cb7', '.cbt', '.epub', '.pdf'
+        ".cbz", ".zip", ".cbr", ".rar", ".cb7", ".7zip", ".7z",
+        ".cbt", ".tar.gz", ".epub", ".pdf", ".cba", ".mobi",
+        ".CBZ", ".ZIP", ".CBR", ".RAR", ".CB7", ".7ZIP", ".7Z",
+        ".CBT", ".TAR.GZ", ".EPUB", ".PDF", ".CBA", ".MOBI"
     )
-    "Archive/container extensions, with dot-prefix, and only lowercase"
-
-    EXTRACTABLE_EXTENSIONS = (
-        '.zip', '.rar',
-        '.ZIP', '.RAR'
-    )
-    """
-    Archive extensions that will be considered to be extracted,
-    and with both lowercase and uppercase
-    """
+    "Archive/container extensions, both lowercase and uppercase, with dot-prefix"
 
     METADATA_EXTENSIONS = (
         ".xml", ".json",
         ".XML", ".JSON"
     )
-    "Extensions of metadata files, and with both lowercase and uppercase"
+    "Metadata file extensions, both lowercase and uppercase, with dot-prefix"
 
     METADATA_FILES = {
         "cvinfo.xml", "comicinfo.xml",
         "series.json", "metadata.json"
     }
-    "Filenames of metadata files, and only lowercase"
+    "Filenames of metadata files, only lowercase"
 
     ARCHIVE_MAGIC_BYTES = {
         b"\x50\x4B\x03\x04": "zip",        # ZIP
@@ -131,14 +178,14 @@ CONTENT_EXTENSIONS = (
     *FileConstants.IMAGE_EXTENSIONS,
     *FileConstants.CONTAINER_EXTENSIONS
 )
-"Extensions of media files"
+"Media file extensions, both lowercase and uppercase, with dot-prefix"
 
 
 SCANNABLE_EXTENSIONS = (
     *CONTENT_EXTENSIONS,
     *FileConstants.METADATA_EXTENSIONS
 )
-"Extensions of files that we want to scan for"
+"Media and metadata file extensions, both lowercase and uppercase, with dot-prefix"
 
 
 class CharConstants:
@@ -154,16 +201,16 @@ class CharConstants:
     "A set of the numbers 0-9 in string form"
 
     ROMAN_DIGITS = {
-        'i': 1,
-        'ii': 2,
-        'iii': 3,
-        'iv': 4,
-        'v': 5,
-        'vi': 6,
-        'vii': 7,
-        'viii': 8,
-        'ix': 9,
-        'x': 10
+        "i": 1,
+        "ii": 2,
+        "iii": 3,
+        "iv": 4,
+        "v": 5,
+        "vi": 6,
+        "vii": 7,
+        "viii": 8,
+        "ix": 9,
+        "x": 10
     }
     "A map of lowercase roman numerals 1-10 to their int equivalent"
 
@@ -178,20 +225,32 @@ class BaseEnum(Enum):
 
 
 class StartType(BaseEnum):
+    "The reason for or cause of starting up"
+
     STARTUP = 130
+    "Normal startup"
     RESTART = 131
+    "A normal restart"
     RESTART_HOSTING_CHANGES = 132
+    "A restart because changes to the hosting settings were made"
 
 
 class SeedingHandling(BaseEnum):
-    COMPLETE = 'complete'
-    "Let torrent complete (finish seeding) and then move all files"
+    "How to handle downloads that completed but still have to seed"
 
-    COPY = 'copy'
-    "Copy the files while the torrent is seeding, then delete original files"
+    COMPLETE = "complete"
+    "Let download fully complete (finish seeding) and then move all files"
+
+    COPY = "copy"
+    """
+    Copy the files while the download is seeding,
+    and once done delete original files
+    """
 
 
 class BlocklistReasonID(BaseEnum):
+    "The ID assosiated with the reason for putting a link on the blocklist"
+
     LINK_BROKEN = 1
     SOURCE_NOT_SUPPORTED = 2
     NO_WORKING_LINKS = 3
@@ -199,133 +258,164 @@ class BlocklistReasonID(BaseEnum):
 
 
 class BlocklistReason(BaseEnum):
-    LINK_BROKEN = 'Link broken'
+    "The reason for putting a link on the blocklist"
 
-    SOURCE_NOT_SUPPORTED = 'Source not supported'
-
-    NO_WORKING_LINKS = 'No supported or working links'
-
-    ADDED_BY_USER = 'Added by user'
+    LINK_BROKEN = "Link broken"
+    SOURCE_NOT_SUPPORTED = "Source not supported"
+    NO_WORKING_LINKS = "No supported or working links"
+    ADDED_BY_USER = "Added by user"
 
 
 class SpecialVersion(BaseEnum):
-    TPB = 'tpb'
+    "The type of volume"
 
-    ONE_SHOT = 'one-shot'
+    TPB = "tpb"
 
-    HARD_COVER = 'hard-cover'
+    ONE_SHOT = "one-shot"
 
-    VOLUME_AS_ISSUE = 'volume-as-issue'
+    HARD_COVER = "hard-cover"
+
+    VOLUME_AS_ISSUE = "volume-as-issue"
     "Volume where each issue is named `Volume N`"
 
-    COVER = 'cover'
-    "Image file is cover of either issue or volume. Overrules over SV's."
+    COVER = "cover"
+    "Image file is cover of either issue or volume. Overrules over SVs."
 
-    METADATA = 'metadata'
-    "Metadata file"
+    METADATA = "metadata"
 
     NORMAL = None
     "Normal volume, so not a special version"
 
 
-short_sv_mapping: Dict[SpecialVersion, str] = dict((
-    (SpecialVersion.HARD_COVER, 'HC'),
-    (SpecialVersion.ONE_SHOT, 'OS'),
-    (SpecialVersion.TPB, 'TPB'),
-    (SpecialVersion.COVER, 'Cover')
+SV_TO_SHORT_TERM: Dict[SpecialVersion, str] = dict((
+    (SpecialVersion.HARD_COVER, "HC"),
+    (SpecialVersion.ONE_SHOT, "OS"),
+    (SpecialVersion.TPB, "TPB"),
+    (SpecialVersion.COVER, "Cover")
 ))
-full_sv_mapping: Dict[SpecialVersion, str] = dict((
-    (SpecialVersion.HARD_COVER, 'Hard-Cover'),
-    (SpecialVersion.ONE_SHOT, 'One-Shot'),
-    (SpecialVersion.TPB, 'TPB'),
-    (SpecialVersion.COVER, 'Cover')
+"""
+A mapping from a SpecialVersion to a short string representing it.
+E.g. `SpecialVersion.HARD_COVER` -> `HC`
+"""
+
+SV_TO_FULL_TERM: Dict[SpecialVersion, str] = dict((
+    (SpecialVersion.HARD_COVER, "Hard-Cover"),
+    (SpecialVersion.ONE_SHOT, "One-Shot"),
+    (SpecialVersion.TPB, "TPB"),
+    (SpecialVersion.COVER, "Cover")
 ))
+"""
+A mapping from a SpecialVersion to a full string representing it.
+E.g. `SpecialVersion.HARD_COVER` -> `Hard-Cover`
+"""
 
 
 class LibrarySorting(BaseEnum):
-    TITLE = 'title, year, volume_number'
-    YEAR = 'year, title, volume_number'
-    VOLUME_NUMBER = 'volume_number, title, year'
-    RECENTLY_ADDED = 'id DESC, title, year, volume_number'
-    PUBLISHER = 'publisher, title, year, volume_number'
-    WANTED = ('issues_downloaded_monitored >= issue_count_monitored, '
-              'title, year, volume_number')
-    RECENTLY_RELEASED = ('(SELECT MAX(date) FROM vol_issues) DESC, '
-                         'title, year, volume_number')
+    """
+    The way to order the library, where the key value is the value of the
+    `ORDER BY ...` SQL statement
+    """
+
+    TITLE = "title, year, volume_number"
+    YEAR = "year, title, volume_number"
+    VOLUME_NUMBER = "volume_number, title, year"
+    RECENTLY_ADDED = "id DESC, title, year, volume_number"
+    PUBLISHER = "publisher, title, year, volume_number"
+    WANTED = ("issues_downloaded_monitored >= issue_count_monitored, "
+              "title, year, volume_number")
+    RECENTLY_RELEASED = ("(SELECT MAX(date) FROM vol_issues) DESC, "
+                         "title, year, volume_number")
 
 
-class LibraryFilters(BaseEnum):
-    WANTED = 'WHERE issues_downloaded_monitored < issue_count_monitored'
-    MONITORED = 'WHERE monitored = 1'
+class LibraryFilter(BaseEnum):
+    """
+    The filter to apply to the library, where the key value is the entire
+    `WHERE ...` SQL statement
+    """
+
+    WANTED = "WHERE issues_downloaded_monitored < issue_count_monitored"
+    MONITORED = "WHERE monitored = 1"
 
 
 class DownloadState(BaseEnum):
-    QUEUED_STATE = 'queued'
-    PAUSED_STATE = 'paused'
-    DOWNLOADING_STATE = 'downloading'
-    SEEDING_STATE = 'seeding'
-    IMPORTING_STATE = 'importing'
+    QUEUED_STATE = "queued"
+    PAUSED_STATE = "paused"
+    DOWNLOADING_STATE = "downloading"
+    SEEDING_STATE = "seeding"
+    IMPORTING_STATE = "importing"
 
-    FAILED_STATE = 'failed'
+    FAILED_STATE = "failed"
     "Download was unsuccessful"
-    CANCELED_STATE = 'canceled'
+    CANCELED_STATE = "canceled"
     "Download was removed from queue"
-    SHUTDOWN_STATE = 'shutting down'
+    SHUTDOWN_STATE = "shutting down"
     "Download was stopped because Kapowarr is shutting down"
 
 
 class SocketEvent(BaseEnum):
-    TASK_ADDED = 'task_added'
-    TASK_STATUS = 'task_status'
-    TASK_ENDED = 'task_ended'
+    "The websocket event"
 
-    QUEUE_ADDED = 'queue_added'
-    QUEUE_STATUS = 'queue_status'
-    QUEUE_ENDED = 'queue_ended'
+    TASK_ADDED = "task_added"
+    TASK_STATUS = "task_status"
+    TASK_ENDED = "task_ended"
 
-    MASS_EDITOR_STATUS = 'mass_editor_status'
+    QUEUE_ADDED = "queue_added"
+    "A download is added to the queue"
+    QUEUE_STATUS = "queue_status"
+    "A status update on a download in the queue"
+    QUEUE_ENDED = "queue_ended"
+    "A download has finished in the queue"
 
-    DOWNLOADED_STATUS = 'downloaded_status'
+    MASS_EDITOR_STATUS = "mass_editor_status"
+    "The progress of a mass editor action"
+
+    DOWNLOADED_STATUS = "downloaded_status"
+    "A change in what issues are marked as downloaded and which aren't"
 
 
 class FailReason(BaseEnum):
-    BROKEN = 'GetComics page unavailable'
-    NO_WORKING_LINKS = 'No working download links on page'
-    LIMIT_REACHED = 'Download limit reached for service'
-    NO_MATCHES = 'No links found that match to volume and are not blocklisted'
+    "The reason a download failed to be added to the queue"
+
+    BROKEN = "Webpage unavailable"
+    NO_WORKING_LINKS = "No working download links on page"
+    LIMIT_REACHED = "Download limit reached for service"
+    NO_MATCHES = "No links found that match to volume and are not blocklisted"
 
 
 class GeneralFileType(BaseEnum):
-    METADATA = 'metadata'
-    COVER = 'cover'
+    METADATA = "metadata"
+    COVER = "cover"
 
 
 class GCDownloadSource(BaseEnum):
-    MEGA = 'Mega'
-    MEDIAFIRE = 'MediaFire'
-    WETRANSFER = 'WeTransfer'
-    PIXELDRAIN = 'Pixeldrain'
-    GETCOMICS = 'GetComics'
-    GETCOMICS_TORRENT = 'GetComics (torrent)'
+    "Download sources offered on a GetComics webpage"
+
+    MEGA = "Mega"
+    MEDIAFIRE = "MediaFire"
+    WETRANSFER = "WeTransfer"
+    PIXELDRAIN = "Pixeldrain"
+    GETCOMICS = "GetComics"
+    "A direct download link straight from their own servers"
+    GETCOMICS_TORRENT = "GetComics (torrent)"
+    "A torrent magnet link directly on the webpage"
 
 
-download_source_versions: Dict[GCDownloadSource, Tuple[str, ...]] = dict((
-    (GCDownloadSource.MEGA, ('mega', 'mega link')),
-    (GCDownloadSource.MEDIAFIRE, ('mediafire', 'mediafire link')),
-    (GCDownloadSource.WETRANSFER,
-        ('wetransfer', 'we transfer', 'wetransfer link', 'we transfer link')),
-    (GCDownloadSource.PIXELDRAIN,
-        ('pixeldrain', 'pixel drain', 'pixeldrain link', 'pixel drain link')),
-    (GCDownloadSource.GETCOMICS,
-        ('getcomics', 'download now', 'main download', 'main server', 'main link',
-       'mirror download', 'mirror server', 'mirror link', 'link 1', 'link 2')),
-    (GCDownloadSource.GETCOMICS_TORRENT,
-        ('getcomics (torrent)', 'torrent', 'torrent link', 'magnet',
-        'magnet link')),
-))
+GC_DOWNLOAD_SOURCE_TERMS: Dict[GCDownloadSource, Tuple[str, ...]] = dict(((
+      GCDownloadSource.MEGA, ("mega", "mega link")),
+     (GCDownloadSource.MEDIAFIRE, ("mediafire", "mediafire link")),
+     (GCDownloadSource.WETRANSFER,
+      ("wetransfer", "we transfer", "wetransfer link", "we transfer link")),
+     (GCDownloadSource.PIXELDRAIN,
+      ("pixeldrain", "pixel drain", "pixeldrain link", "pixel drain link")),
+     (GCDownloadSource.GETCOMICS,
+      ("getcomics", "download now", "main download", "main server", "main link",
+       "mirror download", "mirror server", "mirror link", "link 1", "link 2")),
+     (GCDownloadSource.GETCOMICS_TORRENT,
+      ("getcomics (torrent)", "torrent", "torrent link", "magnet",
+       "magnet link")),))
 """
 GCDownloadSource to strings that can be found in the button text for the
-service on the GC page.
+service on the GC page
 """
 
 
@@ -335,12 +425,16 @@ service on the GC page.
 # of the torrent and usenet sources coming, we're already making the
 # distinction here.
 class DownloadSource(BaseEnum):
-    MEGA = 'Mega'
-    MEDIAFIRE = 'MediaFire'
-    WETRANSFER = 'WeTransfer'
-    PIXELDRAIN = 'Pixeldrain'
-    GETCOMICS = 'GetComics'
-    GETCOMICS_TORRENT = 'GetComics (torrent)'
+    "All possible download sources"
+
+    MEGA = "Mega"
+    MEDIAFIRE = "MediaFire"
+    WETRANSFER = "WeTransfer"
+    PIXELDRAIN = "Pixeldrain"
+    GETCOMICS = "GetComics"
+    "A direct download link straight from their own servers"
+    GETCOMICS_TORRENT = "GetComics (torrent)"
+    "A torrent magnet link directly on the webpage"
 
 
 class MonitorScheme(BaseEnum):
@@ -355,37 +449,39 @@ class CredentialSource(BaseEnum):
 
 
 class DownloadType(BaseEnum):
+    "The download protocol (download type)"
+
     DIRECT = 1
     TORRENT = 2
 
 
-query_formats: Dict[str, Tuple[str, ...]] = {
+QUERY_FORMATS: Dict[str, Tuple[str, ...]] = {
     "TPB": (
-        '{title} Vol. {volume_number} ({year}) TPB',
-        '{title} ({year}) TPB',
-        '{title} Vol. {volume_number} TPB',
-        '{title} Vol. {volume_number}',
-        '{title}'
+        "{title} Vol. {volume_number} ({year}) TPB",
+        "{title} ({year}) TPB",
+        "{title} Vol. {volume_number} TPB",
+        "{title} Vol. {volume_number}",
+        "{title}"
     ),
     "VAI": (
-        '{title} ({year})',
-        '{title}'
+        "{title} ({year})",
+        "{title}"
     ),
     "Volume": (
-        '{title} Vol. {volume_number} ({year})',
-        '{title} ({year})',
-        '{title} Vol. {volume_number}',
-        '{title}'
+        "{title} Vol. {volume_number} ({year})",
+        "{title} ({year})",
+        "{title} Vol. {volume_number}",
+        "{title}"
     ),
     "Issue": (
-        '{title} #{issue_number} ({year})',
-        '{title} Vol. {volume_number} #{issue_number}',
-        '{title} #{issue_number}',
-        '{title}'
+        "{title} #{issue_number} ({year})",
+        "{title} Vol. {volume_number} #{issue_number}",
+        "{title} #{issue_number}",
+        "{title}"
     )
 }
 """
-Volume Special Version to query formats used when searching
+Volume SV to query formats used when searching
 """
 
 
@@ -593,6 +689,7 @@ class CredentialData:
         return
 
     def as_dict(self) -> Dict[str, Any]:
+        "Note: Will replace password with a string of stars"
         result = asdict(self)
 
         result['source'] = self.source.value
@@ -613,10 +710,10 @@ class DBMigrator(ABC):
 
 class MassEditorAction(ABC):
     identifier: str
-    "The string used in the API to refer to the action."
+    "The string used in the API to refer to the action"
 
     def __init__(self, volume_ids: List[int]) -> None:
-        """Ready a mass editor action.
+        """Prepare a mass editor action.
 
         Args:
             volume_ids (List[int]): The volume IDs to work on.
@@ -625,9 +722,12 @@ class MassEditorAction(ABC):
         return
 
     @abstractmethod
-    def run(self, **kwargs) -> None:
-        """Run the mass editor action."""
+    def run(self, **kwargs: Any) -> None:
+        "Run the mass editor action"
         ...
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__}(action={self.identifier}; ids={self.volume_ids}); {id(self)}>'
 
 
 class FileConverter(ABC):
@@ -637,13 +737,13 @@ class FileConverter(ABC):
     @staticmethod
     @abstractmethod
     def convert(file: str) -> List[str]:
-        """Convert a file from source_format to target_format.
+        """Convert a file from `source_format` to `target_format`.
 
         Args:
-            file (str): Filepath to the source file, should be in source_format.
+            file (str): Filepath to the source file, should be in `source_format`.
 
         Returns:
-            List[str]: The resulting files or directories, in target_format.
+            List[str]: The resulting files or directories, in `target_format`.
         """
         ...
 
@@ -670,17 +770,22 @@ class SearchSource(ABC):
         """
         ...
 
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__}(query={self.query}); {id(self)}>'
+
 
 class ExternalDownloadClient(ABC):
     client_type: str
-    "What name the external client has, like 'qBittorrent'."
+    "The name of the external client (e.g. 'qBittorrent')"
 
     download_type: DownloadType
-    "What type of download it is, e.g. a torrent."
+    "The protocol it uses to download (e.g. a torrent)"
 
     required_tokens: Sequence[str]
-    """The keys the client needs or could need for operation
-    (mostly whether it's username + password or api_token)"""
+    """
+    The keys the client needs or could need for operation
+    (mostly whether it's username + password or api_token)
+    """
 
     @property
     @abstractmethod
@@ -739,8 +844,7 @@ class ExternalDownloadClient(ABC):
             the client settings.
 
         Raises:
-            ClientDownloading: There is a download in the queue using the
-            client.
+            ClientDownloading: There is a download using the client.
             ExternalClientNotWorking: Failed to connect to the client.
             KeyNotFound: A required key was not found.
             InvalidKeyValue: One of the parameters has an invalid argument.
@@ -752,8 +856,7 @@ class ExternalDownloadClient(ABC):
         """Delete the client.
 
         Raises:
-            ClientDownloading: There is a download in the queue using the
-            client.
+            ClientDownloading: There is a download using the client.
         """
         ...
 
@@ -781,7 +884,7 @@ class ExternalDownloadClient(ABC):
         ...
 
     @abstractmethod
-    def get_download(self, download_id: str) -> Union[dict, None]:
+    def get_download(self, download_id: str) -> Union[Dict[str, Any], None]:
         """Get the information/status of a download.
 
         Args:
@@ -791,7 +894,7 @@ class ExternalDownloadClient(ABC):
             ExternalClientNotWorking: Can't connect to client.
 
         Returns:
-            Union[dict, None]: The status of the download,
+            Union[Dict[str, Any], None]: The status of the download,
             empty dict if download is not found
             and `None` if client deleted the download.
         """
@@ -824,7 +927,7 @@ class ExternalDownloadClient(ABC):
             base_url (str): The base url on which the client is running.
             username (Union[str, None]): The username to access the client, if set.
             password (Union[str, None]): The password to access the client, if set.
-            api_token (Union[str, None]): The api token to access the client, if set.
+            api_token (Union[str, None]): The API token to access the client, if set.
 
         Returns:
             Union[str, None]: If it's a fail, the reason for failing. If it's
@@ -833,11 +936,15 @@ class ExternalDownloadClient(ABC):
         ...
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}; ID {self.id}; {id(self)}>'
+        return f'<{self.__class__.__name__}(id={self.id}; title={self.title}); {id(self)}>'
 
 
 class Download(ABC):
-    type: str
+    @property
+    @abstractmethod
+    def identifier(self) -> str:
+        "An identifier for the specific download implementation (e.g. 'mf_folder')"
+        ...
 
     @property
     @abstractmethod
@@ -867,35 +974,31 @@ class Download(ABC):
     @property
     @abstractmethod
     def web_link(self) -> Union[str, None]:
-        """Link to webpage for download"""
+        "Link to webpage for download"
         ...
 
     @property
     @abstractmethod
     def web_title(self) -> Union[str, None]:
-        """Title of webpage (or release) for download"""
+        "Title of webpage (or release) for download"
         ...
 
     @property
     @abstractmethod
     def web_sub_title(self) -> Union[str, None]:
-        """
-        Title of sub-section that download falls under (e.g. GC group name)
-        """
+        "Title of sub-section that download falls under (e.g. GC group name)"
         ...
 
     @property
     @abstractmethod
     def download_link(self) -> str:
-        """The link to the download or service page (e.g. link to MF page)"""
+        "The link to the download or service page (e.g. link to MF page)"
         ...
 
     @property
     @abstractmethod
     def pure_link(self) -> str:
-        """
-        The pure link to download from (e.g. pixeldrain API link or MF folder ID)
-        """
+        "The pure link to download from (e.g. pixeldrain API link or MF folder ID)"
         ...
 
     @property
@@ -907,15 +1010,15 @@ class Download(ABC):
     @abstractmethod
     def source_name(self) -> str:
         """
-        The display name of the source. E.g. source_type is Torrent,
-        source_name is indexer name.
+        The display name of the source. E.g. `source_type` is torrent,
+        so `source_name` is indexer name.
         """
         ...
 
     @property
     @abstractmethod
     def files(self) -> List[str]:
-        """List of folders/files that were 'produced' by this download"""
+        "List of folders/files that were 'produced' by this download"
         ...
 
     @files.setter
@@ -928,19 +1031,26 @@ class Download(ABC):
     def filename_body(self) -> str:
         """
         The body of the file/folder name that the downloaded file(s) should
-        be named as at their (almost) final destination.
+        be named as at their (almost) final destination. Only filename, and
+        without extension. E.g. `Iron-Man Volume 02 Issue 003`
         """
         ...
 
     @property
     @abstractmethod
+    def download_folder(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
     def title(self) -> str:
-        """Display title of download"""
+        "Display title of download"
         ...
 
     @property
     @abstractmethod
     def size(self) -> int:
+        "Total size of download in bytes, or `-1` if unknown"
         ...
 
     @property
@@ -956,11 +1066,13 @@ class Download(ABC):
     @property
     @abstractmethod
     def progress(self) -> float:
+        "Progress of download, as a value between `0.0` and `100.0`"
         ...
 
     @property
     @abstractmethod
     def speed(self) -> float:
+        "Download speed, in bytes per second"
         ...
 
     @property
@@ -971,11 +1083,6 @@ class Download(ABC):
     @download_thread.setter
     @abstractmethod
     def download_thread(self, value: Thread) -> None:
-        ...
-
-    @property
-    @abstractmethod
-    def download_folder(self) -> str:
         ...
 
     @abstractmethod
@@ -995,7 +1102,7 @@ class Download(ABC):
 
         forced_match: bool = False
     ) -> None:
-        """Create the download instance.
+        """Prepare the download.
 
         Args:
             download_link (str): The link to the download.
@@ -1038,7 +1145,8 @@ class Download(ABC):
         Start the download.
 
         Raises:
-            DownloadLimitReached: The source that is downloaded from has reached a rate limit.
+            DownloadLimitReached: At the source that is downloaded from,
+            we've reached a rate limit.
         """
         ...
 
@@ -1056,13 +1164,16 @@ class Download(ABC):
         ...
 
     @abstractmethod
-    def todict(self) -> Dict[str, Any]:
+    def as_dict(self) -> Dict[str, Any]:
         """Get a dict representing the download.
 
         Returns:
             Dict[str, Any]: The dict with all information.
         """
         ...
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__}(download_link={self.download_link}; file={self.files[0]}; state={self.state.value}); {id(self)}>'
 
 
 class ExternalDownload(Download):
@@ -1079,13 +1190,16 @@ class ExternalDownload(Download):
     @property
     @abstractmethod
     def external_id(self) -> Union[str, None]:
-        """The ID/hash of the download in the external client."""
+        "The ID/hash of the download in the external client"
         ...
 
     @property
     @abstractmethod
     def sleep_event(self) -> Event:
-        """A threading.Event to use for sleeping the download thread."""
+        """
+        A `threading.Event` to use inside the download thread
+        for sleeping in between status checks
+        """
         ...
 
     @abstractmethod
@@ -1106,7 +1220,7 @@ class ExternalDownload(Download):
         forced_match: bool = False,
         external_client: Union[ExternalDownloadClient, None] = None
     ) -> None:
-        """Create the download instance.
+        """Prepare the download.
 
         Args:
             download_link (str): The link to the download.
@@ -1151,15 +1265,18 @@ class ExternalDownload(Download):
     def update_status(self) -> None:
         """
         Update the various variables about the state/progress
-        of the torrent download.
+        of the external download
         """
         ...
 
     @abstractmethod
     def remove_from_client(self, delete_files: bool) -> None:
-        """Remove the download from the client.
+        """Remove the download from the external client.
 
         Args:
             delete_files (bool): Delete downloaded files.
         """
         ...
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__}(download_link={self.download_link}; file={self.files[0]}; state={self.state.value}); {id(self)}>'

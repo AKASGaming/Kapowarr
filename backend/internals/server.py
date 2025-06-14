@@ -489,7 +489,7 @@ class WebSocket(SocketIO, metaclass=Singleton):
         """
         self.emit(
             SocketEvent.QUEUE_ADDED.value,
-            download.todict()
+            download.as_dict()
         )
         return
 

@@ -16,10 +16,11 @@ from bs4 import BeautifulSoup, Tag
 
 from backend.base.custom_exceptions import (DownloadLimitReached, FailedGCPage,
                                             IssueNotFound, LinkBroken)
-from backend.base.definitions import (BlocklistReason, Constants, Download,
-                                      DownloadGroup, FailReason,
+from backend.base.definitions import (GC_DOWNLOAD_SOURCE_TERMS,
+                                      BlocklistReason, Constants,
+                                      Download, DownloadGroup, FailReason,
                                       GCDownloadSource, SearchResultData,
-                                      SpecialVersion, download_source_versions)
+                                      SpecialVersion)
 from backend.base.file_extraction import extract_filename_data
 from backend.base.helpers import (AsyncSession, check_overlapping_issues,
                                   create_range, fix_year,
@@ -148,7 +149,7 @@ def __check_download_link(
         return
 
     # Check if link is from supported source
-    for source, versions in download_source_versions.items():
+    for source, versions in GC_DOWNLOAD_SOURCE_TERMS.items():
         if any(s in link_text for s in versions):
             LOGGER.debug(
                 f'Checking download link: {link_text} maps to {source.value}'

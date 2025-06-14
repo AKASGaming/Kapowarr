@@ -354,7 +354,7 @@ class BaseDirectDownload(Download):
             self.__r.raw._fp.fp.raw._sock.shutdown(2) # SHUT_RDWR
         return
 
-    def todict(self) -> Dict[str, Any]:
+    def as_dict(self) -> Dict[str, Any]:
         return {
             'id': self._id,
             'volume_id': self._volume_id,
@@ -368,7 +368,7 @@ class BaseDirectDownload(Download):
 
             'source_type': self._source_type.value,
             'source_name': self._source_name,
-            'type': self.type,
+            'type': self.identifier,
 
             'file': self._files[0],
             'title': self._title,
@@ -380,16 +380,15 @@ class BaseDirectDownload(Download):
             'speed': self._speed
         }
 
-    def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}, {self.download_link}, {self.files[0]}, {self.state.value}>'
-
 
 # region Direct
 @final
 class DirectDownload(BaseDirectDownload):
     "For downloading a file directly from a link"
 
-    type = 'direct'
+    @property
+    def identifier(self) -> str:
+        return 'direct'
 
 
 # region MediaFire
@@ -397,7 +396,9 @@ class DirectDownload(BaseDirectDownload):
 class MediaFireDownload(BaseDirectDownload):
     "For downloading a MediaFire file"
 
-    type = 'mf'
+    @property
+    def identifier(self) -> str:
+        return 'mf'
 
     def _convert_to_pure_link(self) -> str:
         r = self._ssn.get(
@@ -423,7 +424,9 @@ class MediaFireDownload(BaseDirectDownload):
 class MediaFireFolderDownload(BaseDirectDownload):
     "For downloading a MediaFire folder (for MF file, use MediaFireDownload)"
 
-    type = 'mf_folder'
+    @property
+    def identifier(self) -> str:
+        return 'mf_folder'
 
     def _convert_to_pure_link(self) -> str:
         return self.download_link.split("/folder/")[1].split("/")[0]
@@ -446,7 +449,9 @@ class MediaFireFolderDownload(BaseDirectDownload):
 class WeTransferDownload(BaseDirectDownload):
     "For downloading a file or folder from WeTransfer"
 
-    type = 'wt'
+    @property
+    def identifier(self) -> str:
+        return 'wt'
 
     def _convert_to_pure_link(self) -> str:
         transfer_id, security_hash = self.download_link.split("/")[-2:]
@@ -473,7 +478,9 @@ class WeTransferDownload(BaseDirectDownload):
 class PixelDrainDownload(BaseDirectDownload):
     "For downloading a file from PixelDrain"
 
-    type = 'pd'
+    @property
+    def identifier(self) -> str:
+        return 'pd'
 
     @staticmethod
     def login(api_key: str) -> int:
@@ -546,7 +553,9 @@ class PixelDrainDownload(BaseDirectDownload):
 class PixelDrainFolderDownload(PixelDrainDownload):
     "For downloading a PixelDrain folder (for PD file, use PixelDrainDownload)"
 
-    type = 'pd_folder'
+    @property
+    def identifier(self) -> str:
+        return 'pd_folder'
 
     def _convert_to_pure_link(self) -> str:
         self._api_key = None
@@ -560,7 +569,10 @@ class PixelDrainFolderDownload(PixelDrainDownload):
 class MegaDownload(BaseDirectDownload):
     "For downloading a file via Mega"
 
-    type = 'mega'
+    @property
+    def identifier(self) -> str:
+        return 'mega'
+
     _mega_class: Type[MegaABC] = Mega
 
     @property
@@ -697,14 +709,19 @@ class MegaDownload(BaseDirectDownload):
 class MegaFolderDownload(MegaDownload):
     "For downloading a Mega folder (for Mega file, use MegaDownload)"
 
-    type = 'mega_folder'
+    @property
+    def identifier(self) -> str:
+        return 'mega_folder'
+
     _mega_class = MegaFolder
 
 
 # region Torrent
 @final
 class TorrentDownload(ExternalDownload, BaseDirectDownload):
-    type = 'torrent'
+    @property
+    def identifier(self) -> str:
+        return 'torrent'
 
     @property
     def external_client(self) -> ExternalDownloadClient:
@@ -866,11 +883,8 @@ class TorrentDownload(ExternalDownload, BaseDirectDownload):
         self._sleep_event.set()
         return
 
-    def todict(self) -> Dict[str, Any]:
+    def as_dict(self) -> Dict[str, Any]:
         return {
-            **super().todict(),
+            **super().as_dict(),
             'client': self.external_client.id if self._external_client else None
         }
-
-    def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}, {self.download_link}, {self.files[0]}>'
