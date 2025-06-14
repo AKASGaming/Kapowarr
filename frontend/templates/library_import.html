@@ -136,8 +136,14 @@
 	<div id="list-window" class="hidden">
 		<div class="action-container">
 			<button class="cancel-button">Cancel</button>
-			<button id="import-button">Import</button>
-			<button id="import-rename-button">Import and Rename</button>
+			<button
+				id="import-button" 
+				title="Add volumes, set volume folder to the folder that the files are in, don't rename the volume folder, don't rename the files."
+			>Import</button>
+			<button
+				id="import-rename-button"
+				title="Add volumes, move files into automatically generated volume folder (named following the settings), rename files."
+			>Import and Rename</button>
 		</div>
 		<div class="table-container icon-text-color">
 			<table aria-label="File list">
