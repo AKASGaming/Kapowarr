@@ -65,7 +65,7 @@ class Credentials:
         ).fetchone()
 
         if result is None:
-            raise CredentialNotFound
+            raise CredentialNotFound(id)
 
         return CredentialData(**{
             **dict(result),

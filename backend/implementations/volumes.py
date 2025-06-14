@@ -86,7 +86,7 @@ class Issue:
         ).fetchone()
 
         if issue_id is None:
-            raise IssueNotFound
+            raise IssueNotFound(id)
         return
 
     @classmethod
@@ -121,7 +121,7 @@ class Issue:
         ).exists()
 
         if not issue_id:
-            raise IssueNotFound
+            raise IssueNotFound(-1)
 
         return cls(issue_id, check_existence=True)
 
@@ -256,7 +256,7 @@ class Volume:
         ).fetchone()
 
         if volume_id is None:
-            raise VolumeNotFound
+            raise VolumeNotFound(id)
         return
 
     def get_data(self) -> VolumeData:
@@ -1023,7 +1023,7 @@ class Library:
         )
 
         if self._volume_added(comicvine_id):
-            raise VolumeAlreadyAdded
+            raise VolumeAlreadyAdded(comicvine_id)
 
         # Raises RootFolderNotFound when ID is invalid
         root_folder = RootFolders().get_one(root_folder_id)
@@ -1136,7 +1136,7 @@ class Library:
                     )
                 ):
                     rollback()
-                    raise VolumeFolderInvalid
+                    raise VolumeFolderInvalid(folder)
 
             volume['folder'] = folder
 

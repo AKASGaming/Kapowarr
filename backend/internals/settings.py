@@ -399,7 +399,7 @@ class Settings(metaclass=Singleton):
             from backend.implementations.root_folders import RootFolders
 
             if not isdir(value):
-                raise FolderNotFound
+                raise FolderNotFound(value)
 
             converted_value = uppercase_drive_letter(
                 force_suffix(abspath(value))

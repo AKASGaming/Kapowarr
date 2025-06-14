@@ -8,31 +8,12 @@ from typing import Any, Dict, List, Tuple, Type, Union
 
 from flask import Blueprint, request, send_file
 
-from backend.base.custom_exceptions import (BlocklistEntryNotFound,
-                                            ClientDownloading,
-                                            CredentialInvalid,
-                                            CredentialNotFound,
-                                            CVRateLimitReached,
-                                            DownloadNotFound,
-                                            ExternalClientNotFound,
-                                            ExternalClientNotWorking,
-                                            FileNotFound, FolderNotFound,
-                                            InvalidComicVineApiKey,
-                                            InvalidKeyValue, InvalidSettingKey,
-                                            InvalidSettingModification,
-                                            InvalidSettingValue, IssueNotFound,
-                                            KeyNotFound, LogFileNotFound,
-                                            RootFolderInUse, RootFolderInvalid,
-                                            RootFolderNotFound,
-                                            TaskForVolumeRunning,
-                                            TaskNotDeletable, TaskNotFound,
-                                            VolumeAlreadyAdded,
-                                            VolumeDownloadedFor,
-                                            VolumeFolderInvalid,
-                                            VolumeNotFound)
-from backend.base.definitions import (BlocklistReason, BlocklistReasonID,
-                                      CredentialData, CredentialSource,
-                                      DownloadSource, LibraryFilter,
+from backend.base.custom_exceptions import (InvalidKeyValue, KeyNotFound,
+                                            LogFileNotFound, TaskNotFound)
+from backend.base.definitions import (BlocklistReason,
+                                      BlocklistReasonID, CredentialData,
+                                      CredentialSource, DownloadSource,
+                                      KapowarrException, LibraryFilter,
                                       LibrarySorting, MonitorScheme,
                                       SpecialVersion, VolumeData)
 from backend.base.helpers import hash_password
@@ -84,30 +65,7 @@ def error_handler(method) -> Any:
         try:
             return method(*args, **kwargs)
 
-        except (
-            BlocklistEntryNotFound,
-            ClientDownloading,
-            CredentialInvalid,
-            CredentialNotFound,
-            CVRateLimitReached,
-            DownloadNotFound,
-            ExternalClientNotFound,
-            ExternalClientNotWorking,
-            FileNotFound, FolderNotFound,
-            InvalidComicVineApiKey,
-            InvalidKeyValue, InvalidSettingKey,
-            InvalidSettingModification,
-            InvalidSettingValue, IssueNotFound,
-            KeyNotFound, LogFileNotFound,
-            RootFolderInUse, RootFolderInvalid,
-            RootFolderNotFound,
-            TaskForVolumeRunning,
-            TaskNotDeletable, TaskNotFound,
-            VolumeAlreadyAdded,
-            VolumeDownloadedFor,
-            VolumeFolderInvalid,
-            VolumeNotFound
-        ) as e:
+        except KapowarrException as e:
             return return_api(**e.api_response)
 
     wrapper.__name__ = method.__name__
@@ -147,9 +105,10 @@ def extract_key(request, key: str, check_existence: bool = True) -> Any:
                 raise InvalidKeyValue(key, value)
 
         elif key == 'cmd':
-            value = task_library.get(value)
-            if value is None:
-                raise TaskNotFound
+            task = task_library.get(value)
+            if task is None:
+                raise TaskNotFound(value)
+            value = task
 
         elif key == 'api_key':
             if not value or value != Settings().sv.api_key:
@@ -335,7 +294,7 @@ def api_tasks():
 
         task: Union[Type[Task], None] = task_library.get(data.get('cmd', ''))
         if not task:
-            raise TaskNotFound
+            raise TaskNotFound(data.get('cmd', ''))
 
         kwargs = {}
         if task.action in (

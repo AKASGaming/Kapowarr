@@ -77,7 +77,7 @@ def get_blocklist_entry(id: int) -> BlocklistEntry:
     ).fetchonedict()
 
     if not entry:
-        raise BlocklistEntryNotFound
+        raise BlocklistEntryNotFound(id)
 
     return BlocklistEntry(**{
         **entry,
@@ -225,6 +225,6 @@ def delete_blocklist_entry(id: int) -> None:
     ).rowcount
 
     if not entry_found:
-        raise BlocklistEntryNotFound
+        raise BlocklistEntryNotFound(id)
 
     return

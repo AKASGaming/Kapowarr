@@ -486,6 +486,12 @@ Volume SV to query formats used when searching
 
 
 # region TypedDicts
+class ApiResponse(TypedDict):
+    result: Any
+    error: Union[str, None]
+    code: int
+
+
 class FilenameData(TypedDict):
     series: str
     year: Union[int, None]
@@ -700,6 +706,15 @@ class CredentialData:
 
 
 # region Abstract Classes
+class KapowarrException(Exception, ABC):
+    "An exception specific to Kapowarr"
+
+    @property
+    @abstractmethod
+    def api_response(self) -> ApiResponse:
+        ...
+
+
 class DBMigrator(ABC):
     start_version: int
 

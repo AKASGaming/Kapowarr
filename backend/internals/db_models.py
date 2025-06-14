@@ -83,7 +83,7 @@ class FilesDB:
         result: List[FileData] = cursor.fetchalldict() # type: ignore
 
         if (file_id or filepath) and not result:
-            raise FileNotFound
+            raise FileNotFound(file_id or filepath or '')
 
         return result
 
