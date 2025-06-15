@@ -12,7 +12,7 @@ from backend.base.definitions import (CONTENT_EXTENSIONS, CharConstants,
                                       FileConstants, FilenameData,
                                       SpecialVersion)
 from backend.base.helpers import (fix_year as fix_broken_year,
-                                  normalize_number, normalize_string)
+                                  normalise_number, normalise_string)
 from backend.base.logging import LOGGER
 
 # autopep8: off
@@ -73,7 +73,7 @@ def _calc_float_issue_number(issue_number: str) -> Union[float, None]:
         pass
 
     # Issue has special number notation
-    issue_number = normalize_number(issue_number)
+    issue_number = normalise_number(issue_number)
 
     # Negative or not
     if issue_number.startswith('-'):
@@ -234,7 +234,7 @@ def extract_filename_data(
     annual = not (annual_result and annual_folder_result)
 
     # Generalise filename
-    filepath = (normalize_string(filepath)
+    filepath = (normalise_string(filepath)
         .replace('+', ' ')
     )
     filepath = french_issue_regex.sub("Issue", filepath)

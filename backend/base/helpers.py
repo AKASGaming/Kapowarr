@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-General "helper" functions and classes
+Generic functions and classes
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ from collections import deque
 from hashlib import pbkdf2_hmac
 from multiprocessing.pool import Pool
 from os import cpu_count, sep, symlink
-from os.path import basename, dirname, exists, join
+from os.path import basename, dirname, exists, isfile, join
 from sys import base_exec_prefix, executable, platform, version_info
-from typing import (TYPE_CHECKING, Any, Callable, Collection, Dict, Generator,
-                    Iterable, Iterator, List, Mapping, Sequence, Tuple, Union)
+from typing import (TYPE_CHECKING, Any, Callable, Collection, Dict, Iterable,
+                    Iterator, List, Mapping, Sequence, Tuple, Union)
 from urllib.parse import unquote
 
 from aiohttp import ClientError, ClientSession
@@ -34,41 +34,72 @@ if TYPE_CHECKING:
     from multiprocessing.pool import IMapIterator
 
 
+# region Python
 def get_python_version() -> str:
-    """Get python version as string
+    """Get python version as string. E.g. `"3.8.10.final.0"`
 
     Returns:
-        str: The python version
+        str: The python version.
     """
     return ".".join(
         str(i) for i in list(version_info)
     )
 
 
-def check_python_version() -> bool:
-    """Check if the python version that is used is a minimum version.
+def check_min_python_version(
+    min_major: int,
+    min_minor: int,
+    min_micro: int
+) -> bool:
+    """Check whether the version of Python that is used is equal or higher than
+    the version given. Will log a critical error if not.
+
+    ```
+    # On Python3.9.1
+    >>> check_min_python_version(3, 8, 2)
+    True
+    >>> check_min_python_version(3, 10, 0)
+    False
+    ```
+
+    Args:
+        min_major (int): The minimum major version.
+        min_minor (int): The minimum minor version.
+        min_micro (int): The miminum micro version.
 
     Returns:
-        bool: Whether or not the python version is version 3.8 or above or not.
+        bool: Whether it's equal or higher than the version given or below it.
     """
-    if not (version_info.major == 3 and version_info.minor >= 8):
+    min_version = (
+        min_major,
+        min_minor,
+        min_micro
+    )
+    current_version = (
+        version_info.major,
+        version_info.minor,
+        version_info.micro
+    )
+
+    if current_version < min_version:
         LOGGER.critical(
-            'The minimum python version required is python3.8 '
-            '(currently '
-            + str(version_info.major) + '.' + str(version_info.minor) + '.' + str(version_info.micro) + # noqa
-            ').'
-        ) # noqa
+            "The minimum python version required is python"
+            + ".".join(map(str, min_version))
+            + " (currently " + ".".join(map(str, current_version)) + ")."
+        )
         return False
+
     return True
 
 
-def get_python_exe() -> str:
-    """Get the path to the python executable.
+def get_python_exe() -> Union[str, None]:
+    """Get the absolute filepath to the python executable.
 
     Returns:
-        str: The python executable path.
+        Union[str, None]: The python executable path, or `None` if not found.
     """
     if platform.startswith('darwin'):
+        filepath = None
         bundle_path = join(
             base_exec_prefix,
             "Resources",
@@ -79,14 +110,18 @@ def get_python_exe() -> str:
         )
         if exists(bundle_path):
             from tempfile import mkdtemp
-            python_path = join(mkdtemp(), "python")
-            symlink(bundle_path, python_path)
+            filepath = join(mkdtemp(), "python")
+            symlink(bundle_path, filepath)
+    else:
+        filepath = executable or None
 
-            return python_path
+    if filepath and not isfile(filepath):
+        filepath = None
 
-    return executable
+    return filepath
 
 
+# region Helpers
 def get_subclasses(
     *classes: type,
     include_self: bool = False,
@@ -97,11 +132,14 @@ def get_subclasses(
 
     Args:
         *classes (type): The classes to get subclasses from.
-        include_self (bool, optional): Whether or not to include the classes
-            themselves. Defaults to False.
-        recursive (bool, optional): Whether or not to get all subclasses
-            recursively. Defaults to True.
-        only_leafs (bool, optional): Whether or not to only return leaf classes.
+
+        include_self (bool, optional): Whether to include the classes themselves.
+            Defaults to False.
+
+        recursive (bool, optional): Whether to get all subclasses recursively.
+            Defaults to True.
+
+        only_leafs (bool, optional): Whether to only return leaf classes.
             Defaults to False.
 
     Returns:
@@ -133,41 +171,128 @@ def get_subclasses(
     return result
 
 
-def batched(l: Sequence[T], n: int) -> Generator[Sequence[T], Any, Any]:
-    """Iterate over l in batches.
+def check_filter(element: T, element_filter: Collection[T]) -> bool:
+    """Check if `element` is in `element_filter`, but only if `element_filter`
+    has content, otherwise return True. Useful for filtering where an empty
+    filter is possible.
+
+    ```
+    >>> check_filter(2, [1, 2, 3])
+    True
+    >>> check_filter(4, [1, 2, 3])
+    False
+    >>> check_filter(2, [])
+    True
+    ```
 
     Args:
-        l (Sequence[T]): The list to iterate over.
+        element (T): The element to check for.
+        element_filter (Collection[T]): The filter.
+            If empty, True is returned.
+
+    Returns:
+        bool: Whether the element is in the filter if the filter has
+            content, otherwise True.
+    """
+    return True if not element_filter else (element in element_filter)
+
+
+def filtered_iter(
+    elements: Iterable[T],
+    element_filter: Collection[T]
+) -> Iterator[T]:
+    """Yields elements from `elements` but an element is only yielded if
+    `element_filter` is empty or if the element is in `element_filter`. Useful
+    for applying the filter `element_filter` to elements where an empty filter
+    is possible.
+
+    ```
+    >>> list(filtered_iter([1, 2, 3, 4], [2, 4, 5]))
+    [2, 4]
+    >>> list(filtered_iter([1, 2, 3, 4], []))
+    [1, 2, 3, 4]
+    ```
+
+    Args:
+        elements (Iterable[T]): The elements to iterate over and yield.
+        element_filter (Collection[T]): The filter. If empty, all elements of
+            `elements` are returned.
+
+    Yields:
+        Iterator[T]: All elements in `elements` if `element_filter` is
+            empty, otherwise only elements that are in `element_filter`.
+    """
+    if not element_filter:
+        yield from elements
+        return
+
+    else:
+        for el in elements:
+            if el in element_filter:
+                yield el
+        return
+
+
+def hash_password(salt: bytes, password: str) -> str:
+    """Hash a password.
+
+    Args:
+        salt (bytes): The salt to use with the hash.
+        password (str): The password the hash.
+
+    Returns:
+        str: The resulting hash.
+    """
+    return urlsafe_b64encode(
+        pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+    ).decode()
+
+
+def get_torrent_info(torrent: bytes) -> Dict[bytes, Any]:
+    """Get the info from the contents of a torrent file.
+
+    Args:
+        torrent (bytes): The contents of a torrent file.
+
+    Returns:
+        Dict[bytes, Any]: The info.
+    """
+    return bdecode(torrent)[b"info"] # type: ignore
+
+
+# region Sequences
+def batched(l: Sequence[T], n: int) -> Iterator[Sequence[T]]:
+    """Iterate over `l` in batches.
+
+    ```
+    >>> list(batched([1, 2, 3, 4, 5, 6, 7], 2))
+    [[1, 2], [3, 4], [5, 6], [7]]
+    ```
+
+    Args:
+        l (Sequence[T]): The sequence to iterate over.
         n (int): The batch size.
 
     Yields:
-        Generator[Sequence[T], Any, Any]: A batch of size n from l
+        Iterator[Sequence[T]]: A batch of size `n` from `l`.
     """
     for ndx in range(0, len(l), n):
         yield l[ndx: ndx + n]
 
 
-def reversed_tuples(
-    i: Iterable[Tuple[T, U]]
-) -> Generator[Tuple[U, T], Any, Any]:
-    """Yield sub-tuples in reversed order.
-
-    Args:
-        i (Iterable[Tuple[T, U]]): Iterator.
-
-    Yields:
-        Generator[Tuple[U, T], Any, Any]: Sub-tuple with reversed order.
-    """
-    for entry_1, entry_2 in i:
-        yield entry_2, entry_1
-
-
-def get_first_of_range(
+def first_of_range(
     n: Union[T, Tuple[T, ...], List[T]]
 ) -> T:
     """Get the first element from a variable that could potentially be a range,
     but could also be a single value. In the case of a single value, the value
     is returned.
+
+    ```
+    >>> first_of_range([1, 2])
+    1
+    >>> first_of_range(1)
+    1
+    ```
 
     Args:
         n (Union[T, Tuple[T, ...], List[T]]): The range or single value.
@@ -181,10 +306,36 @@ def get_first_of_range(
         return n
 
 
-def create_range(
+def first_of_subarrays(
+    subarrays: Iterable[Sequence[T]]
+) -> List[T]:
+    """Get the first element of each sub-array.
+
+    ```
+    >>> first_of_subarrays([[1, 2], [3, 4]])
+    [1, 3]
+    ```
+
+    Args:
+        subarrays (Iterable[Sequence[T]]): List of sub-arrays.
+
+    Returns:
+        List[T]: List with first value of each sub-array.
+    """
+    return [e[0] for e in subarrays]
+
+
+def force_range(
     n: Union[T, Tuple[T, ...], List[T]]
 ) -> Sequence[T]:
     """Create range if input isn't already.
+
+    ```
+    >>> force_range(1)
+    (1, 1)
+    >>> force_range([1, 2])
+    [1, 2]
+    ```
 
     Args:
         n (Union[T, Tuple[T, ...], List[T]]): The value or range.
@@ -198,12 +349,21 @@ def create_range(
         return (n, n)
 
 
+# region Strings
 def force_suffix(source: str, suffix: str = sep) -> str:
     """Add `suffix` to `source`, but only if it's not already there.
 
+    ```
+    >>> force_suffix('/path/to/folder')
+    '/path/to/folder/'
+    >>> force_suffix('example.com/index.html', '.html')
+    'example.com/index.html'
+    ```
+
     Args:
         source (str): The string to process.
-        suffix (str, optional): The suffix to apply. Defaults to sep.
+        suffix (str, optional): The suffix to apply.
+            Defaults to `os.sep`.
 
     Returns:
         str: The resulting string with suffix applied.
@@ -214,47 +374,7 @@ def force_suffix(source: str, suffix: str = sep) -> str:
         return source + suffix
 
 
-def check_filter(element: T, collection: Collection[T]) -> bool:
-    """Check if `element` is in `collection`, but only if `collection` has
-    content, otherwise return True. Useful as filtering where an empty filter
-    is possible.
-
-    Args:
-        element (T): The element to check for.
-        collection (Collection[T]): The collection. If empty, True is returned.
-
-    Returns:
-        bool: Whether the element is in the collection if the collection has
-        content, otherwise True.
-    """
-    return True if not collection else (element in collection)
-
-
-def filtered_iter(
-    elements: Iterable[T],
-    collection: Collection[T]
-) -> Generator[T, Any, Any]:
-    """Yields elements from `elements` but an element is only yielded if
-    `collection` is empty or if the element is in `collection`. Useful as
-    applying the filter `collection` to elements where an empty filter is
-    possible.
-
-    Args:
-        elements (Iterable[T]): The elements to iterate over and yield.
-        collection (Collection[T]): The collection. If empty, all elements of
-        `elements` are returned.
-
-    Yields:
-        Generator[T, Any, Any]: All elements in `elements` if `collection` is
-        empty, otherwise only elements that are in `collection`.
-    """
-    for el in elements:
-        if check_filter(el, collection):
-            yield el
-    return
-
-
-def normalize_string(s: str) -> str:
+def normalise_string(s: str) -> str:
     """Fix some common stuff in strings coming from online sources. Parses
     html escapes (`%20` -> ` `), fixing encoding errors (`_28` -> `(`),
     removing surrounding whitespace and replaces unicode chars by standard
@@ -264,7 +384,7 @@ def normalize_string(s: str) -> str:
         s (str): Input string.
 
     Returns:
-        str: Normalized string.
+        str: Normalised string.
     """
     return (unquote(s)
         .replace('_28', '(')
@@ -275,7 +395,7 @@ def normalize_string(s: str) -> str:
     )
 
 
-def normalize_number(s: str) -> str:
+def normalise_number(s: str) -> str:
     """Turn user-entered numbers (in string form) into more handable versions.
     Handles locale, unknown numbers, trailing chars, surrounding whitespace,
     etc.
@@ -284,7 +404,7 @@ def normalize_number(s: str) -> str:
         s (str): Input string representing a(n) (issue) number.
 
     Returns:
-        str: Normalized string.
+        str: Normalised string.
     """
     return (s
         .replace(',', '.')
@@ -295,7 +415,7 @@ def normalize_number(s: str) -> str:
     )
 
 
-def normalize_year(s: str) -> Union[int, None]:
+def normalise_year(s: str) -> Union[int, None]:
     """Turn user-entered years (in string form) into an int if possible.
     Handles unknown numbers, trailing chars, surrounding whitespace,
     etc.
@@ -304,7 +424,7 @@ def normalize_year(s: str) -> Union[int, None]:
         s (str): Input string representing a year.
 
     Returns:
-        str: Normalized string.
+        Union[int, None]: The year, or None if it failed to convert the string.
     """
     if not s:
         return None
@@ -321,21 +441,19 @@ def normalize_year(s: str) -> Union[int, None]:
     )
 
     if '/' in s:
-        s = next(
-            (
-                e
-                for e in s.split('/')
-                if len(e) == 4
-            ),
-            ''
-        )
+        for date_part in s.split('/'):
+            if len(date_part) == 4:
+                s = date_part
+                break
+        else:
+            return None
 
     if s and s.isdigit():
         return int(s)
     return None
 
 
-def normalize_base_url(base_url: str) -> str:
+def normalise_base_url(base_url: str) -> str:
     """Turn user-entered base URL's into a standard format. No trailing slash,
     and `http://` prefix applied if no protocol is found.
 
@@ -343,11 +461,11 @@ def normalize_base_url(base_url: str) -> str:
         base_url (str): Input base URL.
 
     Returns:
-        str: Normalized base URL.
+        str: Normalised base URL.
     """
     result = base_url.rstrip('/')
-    if not result.startswith(('http://', 'https://')):
-        result = f'http://{result}'
+    if not result.startswith(("http://", "https://")):
+        result = f"http://{result}"
     return result
 
 
@@ -355,7 +473,7 @@ def extract_year_from_date(
     date: Union[str, None],
     default: T = None
 ) -> Union[int, T]:
-    """Get the year from a date in the format YYYY-MM-DD
+    """Get the year from a date in the format `YYYY-MM-DD`.
 
     Args:
         date (Union[str, None]): The date.
@@ -374,18 +492,19 @@ def extract_year_from_date(
         return default
 
 
+# region Numbers
 def to_number_cv_id(ids: Iterable[Union[str, int]]) -> List[int]:
-    """Convert CV ID's into numbers.
+    """Convert CV IDs into numbers.
 
     Args:
-        ids (Iterable[Union[str, int]]): CV ID's. Can have any common format,
-        like 123, "123", "4050-123", "cv:123" and "cv:4050-123".
+        ids (Iterable[Union[str, int]]): CV IDs. Can have any common format,
+            like `123`, `"123"`, `"4050-123"`, `"cv:123"` and `"cv:4050-123"`.
 
     Raises:
         ValueError: Invalid CV ID.
 
     Returns:
-        List[int]: The converted CV ID's, in format `NNNN`
+        List[int]: The converted CV IDs, in format `NNNN`.
     """
     result: List[int] = []
     for i in ids:
@@ -393,49 +512,49 @@ def to_number_cv_id(ids: Iterable[Union[str, int]]) -> List[int]:
             result.append(i)
             continue
 
-        if i.startswith('cv:'):
+        if i.startswith("cv:"):
             i = i.partition(':')[2]
 
         if i.isdigit():
             result.append(int(i))
 
-        elif i.startswith('4050-') and i.replace('-', '').isdigit():
-            result.append(int(i.split('4050-')[-1]))
+        elif i.startswith("4050-") and i.replace('-', '').isdigit():
+            result.append(int(i.split("4050-")[-1]))
 
         else:
-            raise ValueError
+            raise ValueError(f"Unable to convert {i} to a CV ID number")
 
     return result
 
 
 def to_string_cv_id(ids: Iterable[Union[str, int]]) -> List[str]:
-    """Convert CV ID's into short strings.
+    """Convert CV IDs into short strings.
 
     Args:
-        ids (Iterable[Union[str, int]]): CV ID's. Same formats supported as
-        `to_number_cv_id()`.
+        ids (Iterable[Union[str, int]]): CV IDs. Can have any common format,
+            like `123`, `"123"`, `"4050-123"`, `"cv:123"` and `"cv:4050-123"`.
 
     Raises:
         ValueError: Invalid CV ID.
 
     Returns:
-        List[str]: The converted CV ID's, in format `"NNNN"`.
+        List[str]: The converted CV IDs, in format `"NNNN"`.
     """
     return [str(i) for i in to_number_cv_id(ids)]
 
 
 def to_full_string_cv_id(ids: Iterable[Union[str, int]]) -> List[str]:
-    """Convert CV ID's into long strings.
+    """Convert CV IDs into long strings.
 
     Args:
-        ids (Iterable[Union[str, int]]): CV ID's. Same formats supported as
-        `to_number_cv_id()`.
+        ids (Iterable[Union[str, int]]): CV IDs. Can have any common format,
+            like `123`, `"123"`, `"4050-123"`, `"cv:123"` and `"cv:4050-123"`.
 
     Raises:
         ValueError: Invalid CV ID.
 
     Returns:
-        List[str]: The converted CV ID's, in format `"4050-NNNN"`.
+        List[str]: The converted CV IDs, in format `"4050-NNNN"`.
     """
     return ["4050-" + str(i) for i in to_number_cv_id(ids)]
 
@@ -446,12 +565,21 @@ def check_overlapping_issues(
 ) -> bool:
     """Check if two issues overlap. Both can be single issues or ranges.
 
+    ```
+    >>> check_overlapping_issues((1.5, 3.0), (3.1, 5.0))
+    False
+    >>> check_overlapping_issues((1.0, 3.0), (2.0, 4.0))
+    True
+    >>> check_overlapping_issues(3.0, (3.0, 4.0))
+    True
+    ```
+
     Args:
-        issues_1 (Union[float, Tuple[float, float]]): First issue or range.
-        issues_2 (Union[float, Tuple[float, float]]): Second issue or range.
+        issues_1 (Union[float, Tuple[float, float]]): First issue (range).
+        issues_2 (Union[float, Tuple[float, float]]): Second issue (range).
 
     Returns:
-        bool: Whether or not they overlap.
+        bool: Whether they overlap.
     """
     if isinstance(issues_1, (float, int)):
         if isinstance(issues_2, (float, int)):
@@ -466,23 +594,17 @@ def check_overlapping_issues(
                 or issues_1[0] <= issues_2[1] <= issues_1[1])
 
 
-def first_of_column(
-    columns: Iterable[Sequence[T]]
-) -> List[T]:
-    """Get the first element of each sub-array.
-
-    Args:
-        columns (Iterable[Sequence[T]]): List of sub-arrays.
-
-    Returns:
-        List[T]: List with first value of each sub-array.
-    """
-    return [e[0] for e in columns]
-
-
 def fix_year(year: int) -> int:
     """Fix year numbers that are probably a typo.
-    E.g. 2204 -> 2024, 1890 -> 1980, 2010 -> 2010
+
+    ```
+    >>> fix_year(1890)
+    1980
+    >>> fix_year(2010)
+    2010
+    >>> fix_year(2204)
+    2024
+    ```
 
     Args:
         year (int): The possibly broken year.
@@ -500,52 +622,44 @@ def fix_year(year: int) -> int:
     return int(year_str[0] + year_str[2] + year_str[1] + year_str[3])
 
 
-def hash_password(salt: bytes, password: str) -> str:
-    """Hash a password.
-
-    Args:
-        salt (bytes): The salt to use with the hash.
-        password (str): The password the hash.
-
-    Returns:
-        str: The resulting hash.
-    """
-    return urlsafe_b64encode(
-        pbkdf2_hmac('sha256', password.encode(), salt, 100_000)
-    ).decode()
-
-
-def get_torrent_info(torrent: bytes) -> Dict[bytes, Any]:
-    """Get the info from the contents of a torrent file.
-
-    Args:
-        torrent (bytes): The contents of a torrent file.
-
-    Returns:
-        Dict[bytes, Any]: The info.
-    """
-    return bdecode(torrent)[b"info"] # type: ignore
-
-
+# region Helper Classes
 class Singleton(type):
+    """
+    Make each initialisation of a class return the same instance by setting
+    this as the metaclass. Works across threads, but not spawned subprocesses.
+    """
+
     _instances = {}
 
     def __call__(cls, *args, **kwargs):
-        c = str(cls)
-        if c not in cls._instances:
-            cls._instances[c] = super().__call__(*args, **kwargs)
+        c_term = cls.__module__ + '.' + cls.__name__
 
-        return cls._instances[c]
+        if c_term not in cls._instances:
+            cls._instances[c_term] = super().__call__(*args, **kwargs)
+
+        return cls._instances[c_term]
 
 
 class CommaList(list):
     """
-    Normal list but init can also take a string with comma seperated values:
-        `'blue,green,red'` -> `['blue', 'green', 'red']`.
+    Normal list but init can _also_ take a string with comma seperated values.
     Using str() will convert it back to a string with comma seperated values.
+
+    ```
+    >>> c = CommaList('blue,green,red')
+    >>> c.append('purple')
+    >>> str(c)
+    'blue,green,red,purple'
+    ```
     """
 
     def __init__(self, value: Union[str, Iterable]):
+        """Create an instance.
+
+        Args:
+            value (Union[str, Iterable]): Either a string of comma-seperated
+            values, or any other standard input to the `list` class.
+        """
         if not isinstance(value, str):
             super().__init__(value)
             return
@@ -612,6 +726,7 @@ class DictKeyedDict(dict):
         return zip(self.keys(), self.values())
 
 
+# region Requests
 class Session(RSession):
     """
     Inherits from `requests.Session`. Adds retries, sets user agent and handles
@@ -630,17 +745,20 @@ class Session(RSession):
             backoff_factor=Constants.BACKOFF_FACTOR_RETRIES, # type: ignore
             status_forcelist=Constants.STATUS_FORCELIST_RETRIES
         )
-        self.mount('http://', HTTPAdapter(max_retries=retries))
-        self.mount('https://', HTTPAdapter(max_retries=retries))
+        self.mount("http://", HTTPAdapter(max_retries=retries))
+        self.mount("https://", HTTPAdapter(max_retries=retries))
 
-        self.headers.update({'User-Agent': Constants.DEFAULT_USERAGENT})
+        self.headers.update({"User-Agent": Constants.DEFAULT_USERAGENT})
 
         return
 
     def request( # type: ignore
         self,
-        method, url: str,
-        params=None, data=None, headers: Union[Dict[str, str], None] = None,
+        method: str,
+        url: str,
+        params: Union[Dict[str, Any], None] = None,
+        data: Union[list, dict, None] = None,
+        headers: Union[Dict[str, str], None] = None,
         cookies=None, files=None, auth=None,
         timeout=None, allow_redirects=True,
         proxies=None, hooks=None,
@@ -648,14 +766,17 @@ class Session(RSession):
         cert=None, json=None
     ):
         ua, cf_cookies = self.fs.get_ua_cookies(url)
-        self.headers.update({'User-Agent': ua})
+        self.headers.update({"User-Agent": ua})
         self.cookies.update(cf_cookies)
 
         for round in range(1, 3):
             result = super().request(
-                method, url, params, data, headers, cookies, files, auth,
-                timeout, allow_redirects, proxies, hooks, stream, verify, cert,
-                json
+                method, url, params, data, headers,
+                cookies, files, auth,
+                timeout, allow_redirects,
+                proxies, hooks,
+                stream, verify,
+                cert, json
             )
 
             if (
@@ -669,18 +790,24 @@ class Session(RSession):
                     # needed
                     continue
 
-                result.url = fs_result['url']
-                result.status_code = fs_result['status']
-                result._content = fs_result['response'].encode('utf-8')
-                result.headers = CaseInsensitiveDict(fs_result['headers'])
+                result.url = fs_result["url"]
+                result.status_code = fs_result["status"]
+                result._content = fs_result["response"].encode("utf-8")
+                result.headers = CaseInsensitiveDict(fs_result["headers"])
 
             if 400 <= result.status_code < 500:
                 LOGGER.warning(
-                    f"{result.request.method} request to {result.request.url} returned with code {result.status_code}"
+                    "%s request to %s returned with code %d",
+                    result.request.method,
+                    result.request.url,
+                    result.status_code
                 )
                 LOGGER.debug(
-                    f"Request response for {result.request.method} {result.request.url}: %s",
-                    result.text)
+                    "Request response for %s %s: %s",
+                    result.request.method,
+                    result.request.url,
+                    result.text
+                )
 
             return result
 
@@ -695,7 +822,7 @@ class AsyncSession(ClientSession):
         from backend.implementations.flaresolverr import FlareSolverr
 
         super().__init__(
-            headers={'User-Agent': Constants.DEFAULT_USERAGENT}
+            headers={"User-Agent": Constants.DEFAULT_USERAGENT}
         )
 
         self.fs = FlareSolverr()
@@ -703,10 +830,11 @@ class AsyncSession(ClientSession):
         return
 
     async def _request(self, *args, **kwargs):
+        method, url = args[0], args[1]
         sleep_time = Constants.BACKOFF_FACTOR_RETRIES
 
-        ua, cf_cookies = self.fs.get_ua_cookies(args[1])
-        self.headers.update({'User-Agent': ua})
+        ua, cf_cookies = self.fs.get_ua_cookies(url)
+        self.headers.update({"User-Agent": ua})
         self.cookie_jar.update_cookies(cf_cookies)
 
         for round in range(1, Constants.TOTAL_RETRIES + 1):
@@ -718,11 +846,12 @@ class AsyncSession(ClientSession):
 
             except ClientError as e:
                 if round == Constants.TOTAL_RETRIES:
+                    # Exhausted retries
                     raise e
 
                 LOGGER.warning(
-                    f"{args[0]} request failed for url {args[1]}. "
-                    f"Retrying for round {round + 1}..."
+                    "%s request failed for url %s. Retrying for round %d...",
+                    method, url, round + 1
                 )
 
                 await sleep(sleep_time)
@@ -734,9 +863,7 @@ class AsyncSession(ClientSession):
                 and response.status == 403
             ):
                 fs_result = await self.fs.handle_cf_block_async(
-                    self,
-                    args[1],
-                    response.headers
+                    self, url, response.headers
                 )
 
                 if not fs_result:
@@ -744,27 +871,28 @@ class AsyncSession(ClientSession):
                     # needed
                     continue
 
-                response._url = URL(fs_result['url'])
-                response.status = fs_result['status']
-                response._body = fs_result['response'].encode('utf-8')
+                response._url = URL(fs_result["url"])
+                response.status = fs_result["status"]
+                response._body = fs_result["response"].encode("utf-8")
                 response._headers = CIMultiDictProxy(CIMultiDict(
-                    fs_result['headers']
+                    fs_result["headers"]
                 ))
 
-            if response.status >= 400:
+            if 400 <= response.status < 500:
                 LOGGER.warning(
-                    f"{args[0]} request to {args[1]} returned with code {response.status}"
+                    "%s request to %s returned with code %d",
+                    method, url, response.status
                 )
                 LOGGER.debug(
-                    f"Request response for {args[0]} {args[1]}: %s",
-                    await response.text()
+                    "Request response for %s %s: %s",
+                    method, url, await response.text()
                 )
 
             return response
 
         raise ClientError
 
-    async def __aenter__(self) -> "AsyncSession":
+    async def __aenter__(self):
         return self
 
     async def get_text(
@@ -810,7 +938,13 @@ class AsyncSession(ClientSession):
             return await response.content.read()
 
 
+# region Multiprocessing
 class _ContextKeeper(metaclass=Singleton):
+    """
+    Run inside newly spawned process to setup environment and offer a
+    Flask application context
+    """
+
     def __init__(
         self,
         log_level: Union[int, None] = None,
@@ -849,17 +983,23 @@ def pool_starmap_func(func, *args):
 
 
 class PortablePool(Pool):
+    """
+    A multiprocessing pool where the processes run in a proper environment.
+    Stuff like logging, the database and websocket are set up, and everything
+    is run inside a Flask application context.
+    """
+
     def __init__(
         self,
         max_processes: Union[int, None] = None
     ) -> None:
-        """Create a multiprocessing pool that can run on all OS'es and has
-        access to the app context.
+        """Setup an instance.
 
         Args:
             max_processes (Union[int, None], optional): The amount of processes
-            that the pool should manage. Given int is limited to CPU count.
-            Give `None` for default which is CPU count. Defaults to None.
+                that the pool should manage. Given value is limited to CPU count.
+                Give `None` for default, which is CPU count.
+                Defaults to None.
         """
         from backend.internals.db import DBConnection
         from backend.internals.server import WebSocket

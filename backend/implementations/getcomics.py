@@ -23,8 +23,8 @@ from backend.base.definitions import (GC_DOWNLOAD_SOURCE_TERMS,
                                       SpecialVersion)
 from backend.base.file_extraction import extract_filename_data
 from backend.base.helpers import (AsyncSession, check_overlapping_issues,
-                                  create_range, fix_year,
-                                  get_torrent_info, normalize_year)
+                                  fix_year, force_range,
+                                  get_torrent_info, normalise_year)
 from backend.base.logging import LOGGER
 from backend.implementations.blocklist import (add_to_blocklist,
                                                blocklist_contains)
@@ -94,7 +94,7 @@ def _get_articles(
         if not title_el:
             continue
 
-        link = create_range(
+        link = force_range(
             title_el.find('a')["href"] or ''
         )[0]
         title = title_el.get_text(strip=True)
@@ -205,7 +205,7 @@ def __extract_button_links(
             processed_title["year"] is None
             and "Year :\x00\xa0" in extracted_title
         ):
-            year = normalize_year(
+            year = normalise_year(
                 extracted_title
                 .split("Year :\x00\xa0")[1]
                 .split(" |")[0]
@@ -237,7 +237,7 @@ def __extract_button_links(
                 link_title = group_link.text.strip().lower()
                 if group_link.get('href') is None:
                     continue
-                href = create_range(group_link.get('href') or '')[0]
+                href = force_range(group_link.get('href') or '')[0]
                 if not href:
                     continue
 
@@ -303,7 +303,7 @@ def __extract_list_links(
             if group_link.get('href') is None:
                 continue
             link_title = group_link.text.strip().lower()
-            href = create_range(group_link.get('href') or '')[0]
+            href = force_range(group_link.get('href') or '')[0]
             if not href:
                 continue
 
@@ -377,7 +377,7 @@ def __sort_link_paths(p: List[DownloadGroup]) -> Tuple[float, int]:
     issues_covered = sum(
         reduce(
             lambda a, b: (b - a) or 1,
-            create_range(entry["info"]["issue_number"])
+            force_range(entry["info"]["issue_number"])
         )
         for entry in p
         if entry["info"]["issue_number"] is not None

@@ -9,7 +9,7 @@ from backend.base.custom_exceptions import (ClientDownloading,
                                             InvalidKeyValue, KeyNotFound)
 from backend.base.definitions import (ClientTestResult, DownloadType,
                                       ExternalDownloadClient)
-from backend.base.helpers import get_subclasses, normalize_base_url
+from backend.base.helpers import get_subclasses, normalise_base_url
 from backend.internals.db import get_db
 
 
@@ -93,7 +93,7 @@ class BaseExternalClient(ExternalDownloadClient):
                 raise InvalidKeyValue(key, None)
 
             if key == 'base_url':
-                filtered_data[key] = normalize_base_url(data[key])
+                filtered_data[key] = normalise_base_url(data[key])
 
             elif key in self.required_tokens:
                 filtered_data[key] = data[key]
@@ -209,7 +209,7 @@ class ExternalClients:
             raise InvalidKeyValue('type', client_type)
 
         fail_reason = client_types[client_type].test(
-            normalize_base_url(base_url),
+            normalise_base_url(base_url),
             username,
             password,
             api_token
@@ -282,7 +282,7 @@ class ExternalClients:
             'download_type': ClientClass.download_type.value,
             'client_type': client_type,
             'title': title,
-            'base_url': normalize_base_url(base_url),
+            'base_url': normalise_base_url(base_url),
             'username': username,
             'password': password,
             'api_token': api_token

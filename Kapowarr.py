@@ -12,7 +12,7 @@ from typing import NoReturn, Union
 
 from backend.base.custom_exceptions import InvalidSettingValue
 from backend.base.definitions import Constants, StartType
-from backend.base.helpers import check_python_version, get_python_exe
+from backend.base.helpers import check_min_python_version, get_python_exe
 from backend.base.logging import LOGGER, setup_logging
 from backend.features.download_queue import DownloadHandler
 from backend.features.tasks import TaskHandler
@@ -69,7 +69,7 @@ def _main(
     setup_logging(log_folder, log_file)
     LOGGER.info('Starting up Kapowarr')
 
-    if not check_python_version():
+    if not check_min_python_version(*Constants.MIN_PYTHON_VERSION):
         exit(1)
 
     set_db_location(db_folder)
@@ -177,7 +177,12 @@ def _run_sub_process(
         "KAPOWARR_START_TYPE": str(start_type.value)
     }
 
-    comm = [get_python_exe(), "-u", __file__] + argv[1:]
+    py_exe = get_python_exe()
+    if not py_exe:
+        print("ERROR: Python executable not found")
+        return 1
+
+    comm = [py_exe, "-u", __file__] + argv[1:]
     proc = Popen(
         comm,
         env=env

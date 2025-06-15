@@ -31,9 +31,9 @@ from backend.base.files import (create_folder, delete_empty_child_folders,
                                 delete_file_folder, folder_is_inside_folder,
                                 list_files, propose_basefolder_change,
                                 rename_file)
-from backend.base.helpers import (PortablePool, create_range,
-                                  extract_year_from_date, filtered_iter,
-                                  first_of_column, to_number_cv_id)
+from backend.base.helpers import (PortablePool, extract_year_from_date,
+                                  filtered_iter, first_of_subarrays,
+                                  force_range, to_number_cv_id)
 from backend.base.logging import LOGGER
 from backend.implementations.comicvine import ComicVine
 from backend.implementations.matching import (_match_title,
@@ -913,7 +913,7 @@ class Library:
         Returns:
             List[int]: The list of ID's.
         """
-        return first_of_column(get_db().execute(
+        return first_of_subarrays(get_db().execute(
             "SELECT id FROM volumes;"
         ))
 
@@ -1346,7 +1346,7 @@ def scan_files(
                 issue_range = file_data['volume_number']
 
             matching_issues = volume.get_issues_in_range(
-                *create_range(issue_range) # type: ignore
+                *force_range(issue_range) # type: ignore
             )
 
             if matching_issues:
@@ -1601,7 +1601,7 @@ def refresh_and_scan(
     issue_datas = run(cv.fetch_issues(
         tuple(vd["comicvine_id"] for vd in filtered_volume_datas)
     ))
-    monitor_issues_volume_ids: Set[int] = set(first_of_column(cursor.execute(
+    monitor_issues_volume_ids: Set[int] = set(first_of_subarrays(cursor.execute(
         "SELECT id FROM volumes WHERE monitor_new_issues = 1;"
     )))
     cursor.executemany(
@@ -1746,7 +1746,7 @@ def delete_issue_file(file_id: int) -> None:
         delete_file_folder(file_data["filepath"])
 
     cursor = get_db()
-    not_downloaded_issues: List[int] = first_of_column(cursor.execute("""
+    not_downloaded_issues: List[int] = first_of_subarrays(cursor.execute("""
         WITH matched_file_counts AS (
             SELECT
                 issue_id,

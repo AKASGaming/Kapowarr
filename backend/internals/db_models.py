@@ -9,7 +9,7 @@ from typing import Iterable, List, Union
 
 from backend.base.custom_exceptions import FileNotFound
 from backend.base.definitions import FileData, GeneralFileData
-from backend.base.helpers import first_of_column
+from backend.base.helpers import first_of_subarrays
 from backend.base.logging import LOGGER
 from backend.internals.db import get_db
 
@@ -124,7 +124,7 @@ class FilesDB:
 
     @staticmethod
     def issues_covered(filepath: str) -> List[float]:
-        return first_of_column(get_db().execute("""
+        return first_of_subarrays(get_db().execute("""
             SELECT DISTINCT
                 i.calculated_issue_number
             FROM issues i

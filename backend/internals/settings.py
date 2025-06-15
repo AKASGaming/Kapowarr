@@ -17,7 +17,7 @@ from backend.base.files import (folder_is_inside_folder,
                                 folder_path, uppercase_drive_letter)
 from backend.base.helpers import (CommaList, Singleton, force_suffix,
                                   get_python_version, hash_password,
-                                  normalize_base_url, reversed_tuples)
+                                  normalise_base_url)
 from backend.base.logging import LOGGER, set_log_level
 from backend.internals.db import DBConnection, commit, get_db
 from backend.internals.db_migration import get_latest_db_version
@@ -247,7 +247,7 @@ class Settings(metaclass=Singleton):
 
         get_db().executemany(
             "UPDATE config SET value = ? WHERE key = ?;",
-            reversed_tuples(formatted_data.items())
+            ((v, k) for k, v in formatted_data.items())
         )
 
         if (
@@ -456,7 +456,7 @@ class Settings(metaclass=Singleton):
 
             converted_value = value
             if converted_value:
-                converted_value = normalize_base_url(converted_value)
+                converted_value = normalise_base_url(converted_value)
 
             if not converted_value and fs.base_url:
                 # Disable FS, it was running before.

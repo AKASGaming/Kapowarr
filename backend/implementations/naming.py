@@ -26,8 +26,8 @@ from backend.base.files import (clean_filepath_simple, clean_filepath_smartly,
                                 delete_empty_child_folders,
                                 delete_empty_parent_folders, list_files,
                                 rename_file)
-from backend.base.helpers import (create_range, extract_year_from_date,
-                                  filtered_iter)
+from backend.base.helpers import (extract_year_from_date,
+                                  filtered_iter, force_range)
 from backend.base.logging import LOGGER
 from backend.implementations.matching import (_match_title,
                                               file_importing_filter)
@@ -250,7 +250,7 @@ def generate_issue_name(
     elif special_version == SpecialVersion.VOLUME_AS_ISSUE:
         # Iron-Man Volume 1 - 3
         issue = Issue.from_volume_and_calc_number(
-            volume_id, create_range(calculated_issue_number)[0] # type: ignore
+            volume_id, force_range(calculated_issue_number)[0] # type: ignore
         )
         formatting_data = _get_issue_naming_keys(volume_id, issue.id)
         format = sv.file_naming_vai
@@ -268,7 +268,7 @@ def generate_issue_name(
         normal_filename = True
         issue = Issue.from_volume_and_calc_number(
             volume_id,
-            create_range(calculated_issue_number)[0] # type: ignore
+            force_range(calculated_issue_number)[0] # type: ignore
         )
         formatting_data = _get_issue_naming_keys(volume_id, issue.id)
 
@@ -478,7 +478,7 @@ def check_mock_filename(
                         volume_id=0,
                         comicvine_id=456,
                         issue_number="1",
-                        calculated_issue_number=create_range(
+                        calculated_issue_number=force_range(
                             process_issue_number("1") or 0.0
                         )[0],
                         title="One Shot",
@@ -515,7 +515,7 @@ def check_mock_filename(
                         volume_id=0,
                         comicvine_id=456,
                         issue_number="1",
-                        calculated_issue_number=create_range(
+                        calculated_issue_number=force_range(
                             process_issue_number("1") or 0.0
                         )[0],
                         title="",
@@ -554,7 +554,7 @@ def check_mock_filename(
                         volume_id=0,
                         comicvine_id=456,
                         issue_number="3b",
-                        calculated_issue_number=create_range(
+                        calculated_issue_number=force_range(
                             process_issue_number("3b") or 0.0
                         )[0],
                         title="",
@@ -593,7 +593,7 @@ def check_mock_filename(
                         volume_id=0,
                         comicvine_id=456,
                         issue_number="8",
-                        calculated_issue_number=create_range(
+                        calculated_issue_number=force_range(
                             process_issue_number("8") or 0.0
                         )[0],
                         title="",

@@ -24,6 +24,9 @@ U = TypeVar("U")
 
 # region Constants
 class Constants:
+    MIN_PYTHON_VERSION = (3, 8, 0)
+    "The minimum Python version allowed"
+
     SUB_PROCESS_TIMEOUT = 20.0 # seconds
     "Seconds to wait after interrupt until subprocess is killed"
 
@@ -856,7 +859,7 @@ class ExternalDownloadClient(ABC):
 
         Args:
             data (Mapping[str, Any]): The keys and their new values for
-            the client settings.
+                the client settings.
 
         Raises:
             ClientDownloading: There is a download using the client.
@@ -888,7 +891,7 @@ class ExternalDownloadClient(ABC):
             download_link (str): The link to the download (e.g. magnet link).
             target_folder (str): The folder to download in.
             download_name (Union[str, None]): The name of the downloaded folder
-            or file. Set to `None` to keep original name.
+                or file. Set to `None` to keep original name.
 
         Raises:
             ExternalClientNotWorking: Can't connect to client.
@@ -910,8 +913,8 @@ class ExternalDownloadClient(ABC):
 
         Returns:
             Union[Dict[str, Any], None]: The status of the download,
-            empty dict if download is not found
-            and `None` if client deleted the download.
+                empty dict if download is not found
+                and `None` if client deleted the download.
         """
         ...
 
@@ -946,7 +949,7 @@ class ExternalDownloadClient(ABC):
 
         Returns:
             Union[str, None]: If it's a fail, the reason for failing. If it's
-            a success, `None`.
+                a success, `None`.
         """
         ...
 
@@ -1126,13 +1129,13 @@ class Download(ABC):
             volume_id (int): The ID of the volume that the download is for.
 
             covered_issues (Union[float, Tuple[float, float], None]):
-            The calculated issue number (range) that the download covers,
-            or None if download is for special version.
+                The calculated issue number (range) that the download covers,
+                or None if download is for special version.
 
             source_type (DownloadSource): The source type of the download.
 
             source_name (str): The display name of the source.
-            E.g. indexer name.
+                E.g. indexer name.
 
             web_link (Union[str, None]): Link to webpage for download.
 
@@ -1140,18 +1143,18 @@ class Download(ABC):
                 download.
 
             web_sub_title (Union[str, None]): Title of sub-section that download
-            falls under (e.g. GC group name).
+                falls under (e.g. GC group name).
 
             forced_match (bool, optional): Whether the download was forcefully
-            added by the user. Try renaming (if setting says so), but use
-            default name if file doesn't match to issues.
+                added by the user. Try renaming (if setting says so), but use
+                default name if file doesn't match to issues.
                 Defaults to False.
 
         Raises:
             LinkBroken: The link doesn't work.
 
             IssueNotFound: The download refers to issues that don't exist in the
-            volume, and download is not forced.
+                volume, and download is not forced.
         """
         ...
 
@@ -1162,7 +1165,7 @@ class Download(ABC):
 
         Raises:
             DownloadLimitReached: At the source that is downloaded from,
-            we've reached a rate limit.
+                we've reached a rate limit.
         """
         ...
 
@@ -1245,13 +1248,13 @@ class ExternalDownload(Download):
             volume_id (int): The ID of the volume that the download is for.
 
             covered_issues (Union[float, Tuple[float, float], None]):
-            The calculated issue number (range) that the download covers,
-            or None if download is for special version.
+                The calculated issue number (range) that the download covers,
+                or None if download is for special version.
 
             source_type (DownloadSource): The source type of the download.
 
             source_name (str): The display name of the source.
-            E.g. indexer name.
+                E.g. indexer name.
 
             web_link (Union[str, None]): Link to webpage for download.
 
@@ -1259,11 +1262,11 @@ class ExternalDownload(Download):
                 download.
 
             web_sub_title (Union[str, None]): Title of sub-section that download
-            falls under (e.g. GC group name).
+                falls under (e.g. GC group name).
 
             forced_match (bool, optional): Whether the download was forcefully
-            added by the user. Try renaming (if setting says so), but use
-            default name if file doesn't match to issues.
+                added by the user. Try renaming (if setting says so), but use
+                default name if file doesn't match to issues.
                 Defaults to False.
 
             external_client (Union[ExternalDownloadClient, None], optional):
@@ -1275,7 +1278,7 @@ class ExternalDownload(Download):
             LinkBroken: The link doesn't work.
 
             IssueNotFound: The download refers to issues that don't exist in the
-            volume, and download is not forced.
+                volume, and download is not forced.
         """
         ...
 

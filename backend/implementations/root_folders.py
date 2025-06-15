@@ -11,7 +11,7 @@ from backend.base.custom_exceptions import (FolderNotFound, RootFolderInUse,
 from backend.base.definitions import RootFolder, SizeData
 from backend.base.files import (create_folder, folder_is_inside_folder,
                                 uppercase_drive_letter)
-from backend.base.helpers import Singleton, first_of_column, force_suffix
+from backend.base.helpers import Singleton, first_of_subarrays, force_suffix
 from backend.base.logging import LOGGER
 from backend.internals.db import get_db
 from backend.internals.settings import Settings
@@ -193,7 +193,7 @@ class RootFolders(metaclass=Singleton):
         ).id
 
         cursor = get_db()
-        volume_ids: List[int] = first_of_column(cursor.execute(
+        volume_ids: List[int] = first_of_subarrays(cursor.execute(
             "SELECT id FROM volumes WHERE root_folder = ?;",
             (root_folder_id,)
         ))
