@@ -116,20 +116,20 @@ def setup_logging(
 
     Args:
         log_folder (Union[str, None]): The folder to put the log file in.
-        If `None`, the log file will be in the same folder as the application
-        folder. It will be created if it doesn't exist yet.
+            If `None`, the log file will be in the same folder as the
+            application folder. It will be created if it doesn't exist yet.
 
         log_file (Union[str, None]): The filename of the log file.
-        If `None`, the default filename will be used.  It will be created if it
-        doesn't exist yet.
+            If `None`, the default filename will be used.  It will be created if
+            it doesn't exist yet.
 
         do_rollover (bool, optional): Whether to allow the log file to rollover
-        when it reaches the maximum size.
+            when it reaches the maximum size.
             Defaults to True.
 
     Raises:
         ValueError: The given log folder is not a folder, or the given log file
-        is not a file.
+            is not a file.
     """
     from backend.base.files import create_folder, folder_path
 
@@ -199,7 +199,7 @@ def set_log_level(
 
     Args:
         level (Union[int, str]): The level to set the logging to.
-        Should be a logging level, like `logging.INFO` or `"DEBUG"`.
+            Should be a logging level, like `logging.INFO` or `"DEBUG"`.
     """
     if isinstance(level, str):
         level = logging._nameToLevel[level.upper()]

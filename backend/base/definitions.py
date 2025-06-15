@@ -1136,7 +1136,8 @@ class Download(ABC):
 
             web_link (Union[str, None]): Link to webpage for download.
 
-            web_title (Union[str, None]): Title of webpage (or release) for download.
+            web_title (Union[str, None]): Title of webpage (or release) for
+                download.
 
             web_sub_title (Union[str, None]): Title of sub-section that download
             falls under (e.g. GC group name).
@@ -1254,7 +1255,8 @@ class ExternalDownload(Download):
 
             web_link (Union[str, None]): Link to webpage for download.
 
-            web_title (Union[str, None]): Title of webpage (or release) for download.
+            web_title (Union[str, None]): Title of webpage (or release) for
+                download.
 
             web_sub_title (Union[str, None]): Title of sub-section that download
             falls under (e.g. GC group name).
@@ -1265,11 +1267,12 @@ class ExternalDownload(Download):
                 Defaults to False.
 
             external_client (Union[ExternalDownloadClient, None], optional):
-            Force an external client instead of letting the download choose one.
+                Force an external client instead of letting the download choose
+                one.
                 Defaults to None.
 
         Raises:
-            LinkBroken: The link doesn't work
+            LinkBroken: The link doesn't work.
 
             IssueNotFound: The download refers to issues that don't exist in the
             volume, and download is not forced.
