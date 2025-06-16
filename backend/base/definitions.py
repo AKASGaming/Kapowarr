@@ -278,6 +278,8 @@ class SpecialVersion(BaseEnum):
 
     HARD_COVER = "hard-cover"
 
+    OMNIBUS = "omnibus"
+
     VOLUME_AS_ISSUE = "volume-as-issue"
     "Volume where each issue is named `Volume N`"
 
@@ -294,6 +296,7 @@ SV_TO_SHORT_TERM: Dict[SpecialVersion, str] = dict((
     (SpecialVersion.HARD_COVER, "HC"),
     (SpecialVersion.ONE_SHOT, "OS"),
     (SpecialVersion.TPB, "TPB"),
+    (SpecialVersion.OMNIBUS, "Omnibus"),
     (SpecialVersion.COVER, "Cover")
 ))
 """
@@ -305,6 +308,7 @@ SV_TO_FULL_TERM: Dict[SpecialVersion, str] = dict((
     (SpecialVersion.HARD_COVER, "Hard-Cover"),
     (SpecialVersion.ONE_SHOT, "One-Shot"),
     (SpecialVersion.TPB, "TPB"),
+    (SpecialVersion.OMNIBUS, "Omnibus"),
     (SpecialVersion.COVER, "Cover")
 ))
 """

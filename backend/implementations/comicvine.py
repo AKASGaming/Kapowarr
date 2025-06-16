@@ -161,7 +161,8 @@ class ComicVine:
     one_issue_match = (
         SpecialVersion.TPB,
         SpecialVersion.ONE_SHOT,
-        SpecialVersion.HARD_COVER
+        SpecialVersion.HARD_COVER,
+        SpecialVersion.OMNIBUS
     )
     """
     If a volume is one of these types, it can only match to CV search results

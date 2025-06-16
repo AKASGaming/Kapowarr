@@ -19,7 +19,7 @@ if TYPE_CHECKING:
                                           SearchResultMatchData, VolumeData)
 
 clean_title_regex = compile(
-    r'((?<=annual)s|/|\-|–|\+|,|\.|\!|:|\bthe\s|\band\b|&|’|\'|\"|\bone-shot\b|\btpb\b)'
+    r'((?<=annual)s|/|\-|–|\+|,|\.|\!|:|\bthe\s|\band\b|&|’|\'|\"|\bone[\-\s]?shot\b|\bhard[\-\s]?cover\b|\bomnibus\b|\btpb\b)'
 )
 
 
@@ -181,7 +181,8 @@ def _match_special_version(
         issue_number == 1.0
         and reference_version in (
             SpecialVersion.HARD_COVER,
-            SpecialVersion.ONE_SHOT
+            SpecialVersion.ONE_SHOT,
+            SpecialVersion.OMNIBUS
         )
     ):
         return True
@@ -200,6 +201,7 @@ def _match_special_version(
         and reference_version in (
             SpecialVersion.HARD_COVER,
             SpecialVersion.ONE_SHOT,
+            SpecialVersion.OMNIBUS,
             SpecialVersion.VOLUME_AS_ISSUE
         )
     )
