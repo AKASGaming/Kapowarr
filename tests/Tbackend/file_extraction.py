@@ -32,7 +32,7 @@ class extract_filename_data(unittest.TestCase):
             'Iron-Man Volume 2 Issue 3.cbr':
                 {'series': 'Iron Man', 'year': None, 'volume_number': 2, 'special_version': None, 'issue_number': 3.0, 'annual': False},
 
-            '/plex-media/Comics/Batman/Volume 1 (1940)/Batman (1940) Volume 2 Issue 11-25.zip':
+            '/Comics/Batman/Volume 1 (1940)/Batman (1940) Volume 2 Issue 11-25.zip':
                 {'series': 'Batman', 'year': 1940, 'volume_number': 2, 'special_version': None, 'issue_number': (11.0, 25.0), 'annual': False},
 
             'Tales of the Unexpected, 2006-12-00 (#03) (digital) (Glorith-Novus).cbz':
@@ -77,7 +77,7 @@ class extract_filename_data(unittest.TestCase):
             'Aliens Life And Death #003 (2016) Volume 02.cbr':
                 {'series': 'Aliens Life And Death', 'year': 2016, 'volume_number': 2, 'special_version': None, 'issue_number': 3.0, 'annual': False},
 
-            '/home/cas/plex-media/Comics/Invincible Compendium/Volume 1/Invincible Compendium Volume 2 Issue 3 - Volume 4 (2018-07-18).cbr':
+            '/Comics/Invincible Compendium/Volume 1/Invincible Compendium Volume 2 Issue 3 - Volume 4 (2018-07-18).cbr':
                 {'series': 'Invincible Compendium', 'year': 2018, 'volume_number': 2, 'special_version': None, 'issue_number': 3.0, 'annual': False},
 
             'Batman and the Mad Monk (1-6) (2006-2007) GetComics.INFO/Batman___The_Mad_Monk_02__2007___team-ocdcp_.cbr':

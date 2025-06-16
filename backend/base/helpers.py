@@ -619,6 +619,27 @@ def check_overlapping_issues(
                 or issues_1[0] <= issues_2[1] <= issues_1[1])
 
 
+def check_overlapping_pos(
+    established_positions: Sequence[Tuple[int, int]],
+    check_positions: Tuple[int, int]
+) -> bool:
+    """Check whether a position range overlaps with existing position ranges.
+
+    Args:
+        established_positions (Sequence[Tuple[int, int]]): The existing position
+            ranges.
+        check_positions (Tuple[int, int]): The position range to check.
+
+    Returns:
+        bool: Whether they overlap.
+    """
+    return any(
+        e_pos[0] <= check_positions[0] < e_pos[1]
+        or e_pos[0] < check_positions[1] <= e_pos[1]
+        for e_pos in established_positions
+    )
+
+
 def fix_year(year: int) -> int:
     """Fix year numbers that are probably a typo.
 
