@@ -18,7 +18,7 @@ from typing import (TYPE_CHECKING, Any, Callable, Collection, Dict, Iterable,
                     Iterator, List, Mapping, Sequence, Tuple, Union)
 from urllib.parse import unquote
 
-from aiohttp import ClientError, ClientSession
+from aiohttp import ClientError, ClientSession, ClientTimeout
 from bencoding import bdecode
 from multidict import CIMultiDict, CIMultiDictProxy
 from requests import Session as RSession
@@ -806,7 +806,8 @@ class Session(RSession):
         data: Union[list, dict, None] = None,
         headers: Union[Dict[str, str], None] = None,
         cookies=None, files=None, auth=None,
-        timeout=None, allow_redirects=True,
+        timeout: Union[int, None] = Constants.REQUEST_TIMEOUT,
+        allow_redirects=True,
         proxies=None, hooks=None,
         stream=None, verify=None,
         cert=None, json=None
@@ -868,7 +869,11 @@ class AsyncSession(ClientSession):
         from backend.implementations.flaresolverr import FlareSolverr
 
         super().__init__(
-            headers={"User-Agent": Constants.DEFAULT_USERAGENT}
+            headers={"User-Agent": Constants.DEFAULT_USERAGENT},
+            timeout=ClientTimeout(
+                connect=Constants.REQUEST_TIMEOUT,
+                sock_read=Constants.REQUEST_TIMEOUT
+            )
         )
 
         self.fs = FlareSolverr()

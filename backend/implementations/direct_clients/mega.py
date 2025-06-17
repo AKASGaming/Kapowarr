@@ -12,7 +12,7 @@ from zipfile import ZipFile
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from requests.exceptions import JSONDecodeError as RequestsJSONDecodeError
-from urllib3.exceptions import ProtocolError
+from urllib3.exceptions import ProtocolError, TimeoutError
 
 from backend.base.custom_exceptions import (ClientNotWorking,
                                             DownloadLimitReached, LinkBroken)
@@ -714,7 +714,7 @@ class Mega(MegaABC):
                             if chunk and len(chunk) != chunk_size:
                                 raise ProtocolError
 
-                        except ProtocolError:
+                        except (ProtocolError, TimeoutError):
                             # Connection error, packet loss, etc. Just try again
                             break
 
@@ -919,7 +919,7 @@ class MegaFolder(MegaABC):
                                     if chunk and len(chunk) != chunk_size:
                                         raise ProtocolError
 
-                                except ProtocolError:
+                                except (ProtocolError, TimeoutError):
                                     # Connection error, packet loss, etc.
                                     # Just try again
                                     break
