@@ -197,7 +197,8 @@ class MegaCrypto:
 
     @staticmethod
     def get_chunks(
-        start: int, size: int
+        start: int,
+        size: int
     ) -> Generator[Tuple[int, int], Any, None]:
         """
         Calculate chunks for a given encrypted file size.
@@ -710,6 +711,8 @@ class Mega(MegaABC):
 
                         try:
                             chunk = r.read(chunk_size)
+                            if chunk and len(chunk) != chunk_size:
+                                raise ProtocolError
 
                         except ProtocolError:
                             # Connection error, packet loss, etc. Just try again
@@ -723,10 +726,9 @@ class Mega(MegaABC):
                         f.write(chunk)
                         cbc_mac.update(chunk)
 
-                        chunk_length = len(chunk)
-                        size_downloaded += chunk_length
+                        size_downloaded += chunk_size
                         self.speed = round(
-                            chunk_length / (perf_counter() - start_time),
+                            chunk_size / (perf_counter() - start_time),
                             2
                         )
                         self.progress = round(
@@ -745,7 +747,8 @@ class Mega(MegaABC):
             else:
                 # Failed to download file
                 raise ClientNotWorking(
-                    "The Mega download could not be downloaded, because of a connection error"
+                    "The Mega download could not be downloaded, "
+                    "because of a connection error"
                 )
 
         if self.downloading:
@@ -913,10 +916,12 @@ class MegaFolder(MegaABC):
 
                                 try:
                                     chunk = r.read(chunk_size)
+                                    if chunk and len(chunk) != chunk_size:
+                                        raise ProtocolError
 
                                 except ProtocolError:
-                                    # Connection error, packet loss, etc. Just
-                                    # try again
+                                    # Connection error, packet loss, etc.
+                                    # Just try again
                                     break
 
                                 if not chunk:
@@ -929,11 +934,10 @@ class MegaFolder(MegaABC):
                                 f.write(chunk)
                                 cbc_mac.update(chunk)
 
-                                chunk_length = len(chunk)
-                                size_downloaded += chunk_length
-                                file_size_downloaded += chunk_length
+                                size_downloaded += chunk_size
+                                file_size_downloaded += chunk_size
                                 self.speed = round(
-                                    chunk_length
+                                    chunk_size
                                     /
                                     (perf_counter() - start_time),
                                     2
@@ -954,7 +958,8 @@ class MegaFolder(MegaABC):
                     else:
                         # Failed to download file
                         raise ClientNotWorking(
-                            "The Mega download could not be downloaded, because of a connection error"
+                            "The Mega download could not be downloaded, "
+                            "because of a connection error"
                         )
 
                 if self.downloading:
