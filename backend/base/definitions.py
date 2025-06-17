@@ -962,11 +962,8 @@ class ExternalDownloadClient(ABC):
 
 
 class Download(ABC):
-    @property
-    @abstractmethod
-    def identifier(self) -> str:
-        "An identifier for the specific download implementation (e.g. 'mf_folder')"
-        ...
+    identifier: str
+    "An identifier for the specific download implementation (e.g. 'mf_folder')"
 
     @property
     @abstractmethod
