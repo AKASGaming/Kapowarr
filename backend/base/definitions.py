@@ -88,7 +88,7 @@ class Constants:
     TOTAL_RETRIES = 5
     "The amount of times to try a network connection before giving up"
 
-    BACKOFF_FACTOR_RETRIES = 0.1
+    BACKOFF_FACTOR_RETRIES = 1
     "Backoff factor for waiting in-between retries"
 
     STATUS_FORCELIST_RETRIES = (500, 502, 503, 504)

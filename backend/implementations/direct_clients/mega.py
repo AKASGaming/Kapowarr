@@ -11,7 +11,8 @@ from typing import Any, Callable, Dict, Generator, List, Sequence, Tuple, Union
 from zipfile import ZipFile
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from requests.exceptions import JSONDecodeError as RequestsJSONDecodeError
+from requests.exceptions import (JSONDecodeError as RequestsJSONDecodeError,
+                                 RetryError)
 from urllib3.exceptions import ProtocolError, TimeoutError
 
 from backend.base.custom_exceptions import (ClientNotWorking,
@@ -319,7 +320,7 @@ class MegaAccount:
                 self.client.sid = self._login_user(username, password)
             else:
                 self.client.sid = self._login_anonymous()
-        except RequestsJSONDecodeError:
+        except (RequestsJSONDecodeError, RetryError):
             raise ClientNotWorking("Failed to login into Mega")
 
         return
@@ -591,7 +592,7 @@ class Mega(MegaABC):
             ):
                 raise JSONDecodeError('', '', -1)
 
-        except JSONDecodeError:
+        except (JSONDecodeError, RetryError):
             raise ClientNotWorking(
                 "The Mega download link is not found, does not exist anymore or is broken"
             )
@@ -802,7 +803,7 @@ class MegaFolder(MegaABC):
             ):
                 raise JSONDecodeError('', '', -1)
 
-        except JSONDecodeError:
+        except (JSONDecodeError, RetryError):
             raise ClientNotWorking(
                 "The Mega Folder download link is not found, does not exist anymore or is broken"
             )
@@ -886,7 +887,7 @@ class MegaFolder(MegaABC):
                     ):
                         raise JSONDecodeError('', '', -1)
 
-                except JSONDecodeError:
+                except (JSONDecodeError, RetryError):
                     raise ClientNotWorking(
                         "The Mega download link is not found, does not exist anymore or is broken"
                     )

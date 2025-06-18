@@ -84,7 +84,7 @@ class BaseExternalClient(ExternalDownloadClient):
         ).fetchone() is not None:
             raise ClientDownloading(self.id)
 
-        filtered_data = {}
+        filtered_data: Dict[str, Any] = {}
         for key in ('title', 'base_url', 'username', 'password', 'api_token'):
             if key in self.required_tokens and key not in data:
                 raise KeyNotFound(key)
@@ -102,7 +102,7 @@ class BaseExternalClient(ExternalDownloadClient):
                 filtered_data[key] = None
 
         if (
-            filtered_data['username'] is not None # type: ignore
+            filtered_data['username'] is not None
             and filtered_data['password'] is None
         ):
             # Username given but not password
