@@ -131,7 +131,7 @@ class ComicVine:
         'description',
         'id',
         'image',
-        'issues', #
+        'issues',
         'name',
         'publisher',
         'site_detail_url',
@@ -142,6 +142,7 @@ class ComicVine:
         'issue_number',
         'name',
         'cover_date',
+        'store_date',
         'description',
         'volume'
     ))
@@ -180,10 +181,13 @@ class ComicVine:
         Raises:
             InvalidComicVineApiKey: No ComicVine API key is set in the settings.
         """
+        settings = Settings().get_settings()
         self.api_url = Constants.CV_API_URL
-        api_key = comicvine_api_key or Settings().sv.comicvine_api_key
+        api_key = comicvine_api_key or settings.comicvine_api_key
         if not api_key:
             raise InvalidComicVineApiKey
+
+        self.date_type = settings.date_type.value
 
         self.ssn = Session()
         self._params = {'format': 'json', 'api_key': api_key}
@@ -343,7 +347,7 @@ class ComicVine:
             'issue_number': issue_data['issue_number'].replace('/', '-'),
             'calculated_issue_number': cin if cin is not None else 0.0,
             'title': issue_data['name'] or None,
-            'date': issue_data['cover_date'] or None,
+            'date': issue_data[self.date_type] or None,
             'description': _clean_description(
                 issue_data['description'],
                 short=True

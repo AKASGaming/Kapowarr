@@ -11,7 +11,8 @@ from typing import Any, Dict, Mapping
 from backend.base.custom_exceptions import (FolderNotFound, InvalidSettingKey,
                                             InvalidSettingModification,
                                             InvalidSettingValue)
-from backend.base.definitions import (BaseEnum, Constants, GCDownloadSource,
+from backend.base.definitions import (BaseEnum, Constants,
+                                      DateType, GCDownloadSource,
                                       SeedingHandling, StartType)
 from backend.base.files import (folder_is_inside_folder,
                                 folder_path, uppercase_drive_letter)
@@ -31,6 +32,7 @@ class SettingsValues:
     auth_salt: bytes = token_bytes()
     comicvine_api_key: str = ''
     api_key: str = ''
+    flaresolverr_base_url: str = ''
 
     host: str = '0.0.0.0'
     port: int = 5656
@@ -58,6 +60,10 @@ class SettingsValues:
 
     unmonitor_deleted_issues: bool = False
 
+    convert: bool = False
+    extract_issue_ranges: bool = False
+    format_preference: CommaList = field(default_factory=lambda: CommaList(''))
+
     service_preference: CommaList = field(default_factory=lambda: CommaList(
         (s.value for s in GCDownloadSource._member_map_.values())
     ))
@@ -67,11 +73,7 @@ class SettingsValues:
     seeding_handling: SeedingHandling = SeedingHandling.COPY
     delete_completed_downloads: bool = True
 
-    convert: bool = False
-    extract_issue_ranges: bool = False
-    format_preference: CommaList = field(default_factory=lambda: CommaList(''))
-
-    flaresolverr_base_url: str = ''
+    date_type: DateType = DateType.COVER_DATE
 
     def to_dict(self) -> Dict[str, Any]:
         result = {}
@@ -165,6 +167,7 @@ class Settings(metaclass=Singleton):
 
         for en_key, en in (
             ('seeding_handling', SeedingHandling),
+            ('date_type', DateType),
         ):
             db_values[en_key] = en[db_values[en_key].upper()]
 

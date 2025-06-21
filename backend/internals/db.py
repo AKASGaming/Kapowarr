@@ -15,8 +15,8 @@ from typing import Any, Dict, Generator, Iterable, List, Union
 
 from flask import g
 
-from backend.base.definitions import (Constants, SeedingHandling,
-                                      SpecialVersion, T)
+from backend.base.definitions import (Constants, DateType,
+                                      SeedingHandling, SpecialVersion, T)
 from backend.base.files import create_folder, folder_path
 from backend.base.helpers import CommaList
 from backend.base.logging import LOGGER, set_log_level
@@ -274,6 +274,7 @@ def setup_db_adapters_and_converters() -> None:
     register_adapter(CommaList, lambda c: str(c))
     register_adapter(SeedingHandling, lambda e: e.value)
     register_adapter(SpecialVersion, lambda e: e.value)
+    register_adapter(DateType, lambda e: e.value)
     return
 
 

@@ -116,6 +116,11 @@ def ui_download_clients():
     return render('settings_download_clients.html')
 
 
+@ui.route('/settings/metadata', methods=methods)
+def ui_metadata():
+    return render('settings_metadata.html')
+
+
 @ui.route('/settings/general', methods=methods)
 def ui_general():
     return render('settings_general.html')
