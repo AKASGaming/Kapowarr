@@ -470,22 +470,24 @@ class WeTransferDownload(BaseDirectDownload):
 class PixelDrainDownload(BaseDirectDownload):
     "For downloading a file from PixelDrain"
 
-    identifier: str = 'pd'
+    identifier: str = "pd"
 
     @staticmethod
     def login(api_key: str) -> int:
-        LOGGER.debug('Logging into Pixeldrain with user api key')
+        LOGGER.debug("Logging into Pixeldrain with user api key")
         with Session() as session:
+            enc_api_key = b64encode(
+                f":{api_key}".encode()
+            ).decode()
+
             try:
-                response = session.get(
-                    Constants.PIXELDRAIN_API_URL + '/user/lists',
+                r = session.get(
+                    Constants.PIXELDRAIN_API_URL + "/user",
                     headers={
-                        "Authorization": "Basic " + b64encode(
-                            f":{api_key}".encode()
-                        ).decode()
+                        "Authorization": "Basic " + enc_api_key
                     }
                 )
-                if response.status_code == 401:
+                if r.status_code == 401:
                     return -1
 
             except RequestException:
@@ -493,19 +495,28 @@ class PixelDrainDownload(BaseDirectDownload):
                     "An unexpected error occured when making contact with Pixeldrain"
                 )
 
-            limits = session.get(
-                Constants.PIXELDRAIN_API_URL + '/misc/rate_limits',
-                headers={
-                    "Authorization": "Basic " + b64encode(
-                        f":{api_key}".encode()
-                    ).decode()
-                }
-            ).json()
+            response = r.json()
+            if (response["subscription"]["type"] or "free").lower() == "free":
+                # Free account, so fetch standard rate limits
+                limits = session.get(
+                    Constants.PIXELDRAIN_API_URL + '/misc/rate_limits',
+                    headers={
+                        "Authorization": "Basic " + enc_api_key
+                    }
+                ).json()
 
-        transfer_limit_used = limits["transfer_limit_used"]
-        transfer_limit = limits["transfer_limit"]
+                transfer_limit_used = limits["transfer_limit_used"]
+                transfer_limit = limits["transfer_limit"]
+
+            else:
+                # Paid account, so grab transfer limits from user data
+                transfer_limit_used = response["monthly_transfer_used"]
+                transfer_limit = response["monthly_transfer_cap"]
+                if transfer_limit == -1:
+                    transfer_limit = float("inf")
+
         LOGGER.debug(
-            f'Pixeldrain account transfer state: {transfer_limit_used}/{transfer_limit}'
+            f"Pixeldrain account transfer state: {transfer_limit_used}/{transfer_limit}"
         )
         return int(transfer_limit_used < transfer_limit)
 
