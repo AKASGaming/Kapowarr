@@ -295,7 +295,7 @@ class ComicVine:
             'site_url': volume_data['site_detail_url'],
 
             'aliases': [
-                a
+                a.strip()
                 for a in (volume_data.get('aliases') or '').split('\r\n')
                 if a
             ],
@@ -344,9 +344,9 @@ class ComicVine:
         result: IssueMetadata = {
             'comicvine_id': int(issue_data['id']),
             'volume_id': int(issue_data['volume']['id']),
-            'issue_number': issue_data['issue_number'].replace('/', '-'),
+            'issue_number': issue_data['issue_number'].replace('/', '-').strip(),
             'calculated_issue_number': cin if cin is not None else 0.0,
-            'title': issue_data['name'] or None,
+            'title': normalise_string(issue_data['name']) or None,
             'date': issue_data[self.date_type] or None,
             'description': _clean_description(
                 issue_data['description'],
