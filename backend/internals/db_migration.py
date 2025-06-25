@@ -1,31 +1,37 @@
 # -*- coding: utf-8 -*-
 
 from asyncio import run
+from functools import lru_cache
 from typing import Dict, List, Type
 
 from backend.base.definitions import DBMigrator
 from backend.base.helpers import get_subclasses
 from backend.base.logging import LOGGER
+from backend.internals.db import get_db, iter_commit
 
 
-class VersionMappingContainer:
-    version_map: Dict[int, Type[DBMigrator]] = {}
+@lru_cache(1)
+def get_db_migration_map() -> Dict[int, Type[DBMigrator]]:
+    """Get a map of the database version to the migrator class for that version
+    to one database version higher. E.g. 2 -> Migrate2To3.
 
-
-def _load_version_map() -> None:
-    if VersionMappingContainer.version_map:
-        return
-
-    VersionMappingContainer.version_map = {
+    Returns:
+        Dict[int, Type[DBMigrator]]: The map.
+    """
+    return {
         m.start_version: m
         for m in get_subclasses(DBMigrator)
     }
-    return
 
 
+@lru_cache(1)
 def get_latest_db_version() -> int:
-    _load_version_map()
-    return max(VersionMappingContainer.version_map) + 1
+    """Get the latest database version supported.
+
+    Returns:
+        int: The version.
+    """
+    return max(get_db_migration_map()) + 1
 
 
 def migrate_db() -> None:
@@ -33,28 +39,30 @@ def migrate_db() -> None:
     Migrate a Kapowarr database from it's current version
     to the newest version supported by the Kapowarr version installed.
     """
-    from backend.internals.db import iter_commit
     from backend.internals.settings import Settings
 
     s = Settings()
-    current_db_version = s['database_version']
+    current_db_version = s["database_version"]
     newest_version = get_latest_db_version()
     if current_db_version == newest_version:
+        get_db_migration_map.cache_clear()
         return
 
-    LOGGER.info('Migrating database to newer version...')
+    LOGGER.info("Migrating database to newer version...")
     LOGGER.debug(
         "Database migration: %d -> %d",
         current_db_version, newest_version
     )
 
+    db_migration_map = get_db_migration_map()
     for start_version in iter_commit(range(current_db_version, newest_version)):
-        if start_version not in VersionMappingContainer.version_map:
+        if start_version not in db_migration_map:
             continue
-        VersionMappingContainer.version_map[start_version]().run()
+        db_migration_map[start_version]().run()
         s["database_version"] = start_version + 1
 
     s._fetch_settings()
+    get_db_migration_map.cache_clear()
 
     return
 
@@ -65,8 +73,6 @@ class MigrateClearDownloadQueue(DBMigrator):
     def run(self) -> None:
         # V1 -> V2
 
-        from backend.internals.db import get_db
-
         get_db().executescript("DELETE FROM download_queue;")
         return
 
@@ -76,8 +82,6 @@ class MigrateUpdateIssuesAndFiles(DBMigrator):
 
     def run(self) -> None:
         # V2 -> V3
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             BEGIN TRANSACTION;
@@ -150,7 +154,6 @@ class MigrateRecalculateIssueNumber(DBMigrator):
         # V4 -> V5
 
         from backend.base.file_extraction import process_issue_number
-        from backend.internals.db import get_db
 
         cursor = get_db()
         iter_cursor = get_db(force_new=True)
@@ -171,7 +174,6 @@ class MigrateAddCVFetchTime(DBMigrator):
         # V5 -> V6
 
         from backend.implementations.comicvine import ComicVine
-        from backend.internals.db import get_db
 
         cursor = get_db()
         cursor.executescript("""
@@ -231,8 +233,6 @@ class MigrateAddCustomFolder(DBMigrator):
     def run(self) -> None:
         # V6 -> V7
 
-        from backend.internals.db import get_db
-
         get_db().execute("""
             ALTER TABLE volumes
                 ADD custom_folder BOOL NOT NULL DEFAULT 0;
@@ -248,7 +248,6 @@ class MigrateAddSpecialVersion(DBMigrator):
 
         from backend.implementations.volumes import (Library,
                                                      determine_special_version)
-        from backend.internals.db import get_db
 
         cursor = get_db()
         cursor.execute("""
@@ -276,8 +275,6 @@ class MigrateUpdateVolumeTable(DBMigrator):
 
     def run(self) -> None:
         # V8 -> V9
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             PRAGMA foreign_keys = OFF;
@@ -328,6 +325,7 @@ class MigrateUpdateManifest(DBMigrator):
         # That has since been replaced by the dynamic endpoint serving the JSON.
         # So the migration doesn't do anything anymore, and a function used
         # doesn't exist anymore, so the whole migration is just removed.
+
         return
 
 
@@ -339,7 +337,6 @@ class MigrateUpdateSpecialVersion(DBMigrator):
 
         from backend.implementations.volumes import (Library,
                                                      determine_special_version)
-        from backend.internals.db import get_db
 
         updates = (
             (
@@ -362,8 +359,6 @@ class MigrateAddTorrentClientToDownloadQueue(DBMigrator):
 
     def run(self) -> None:
         # V11 -> V12
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             DROP TABLE download_queue;
@@ -395,8 +390,6 @@ class MigrateUnzipToFormatPreference(DBMigrator):
     def run(self) -> None:
         # V12 -> V13
 
-        from backend.internals.db import get_db
-
         cursor = get_db()
         unzip = cursor.execute(
             "SELECT value FROM config WHERE key = 'unzip' LIMIT 1;"
@@ -425,8 +418,6 @@ class MigrateFolderConversionToOwnSetting(DBMigrator):
 
     def run(self) -> None:
         # V13 -> V14
-
-        from backend.internals.db import get_db
 
         cursor = get_db()
         format_preference: List[str] = cursor.execute("""
@@ -460,8 +451,6 @@ class MigrateServicePreferenceToSetting(DBMigrator):
     def run(self) -> None:
         # V14 -> V15
 
-        from backend.internals.db import get_db
-
         cursor = get_db()
         service_preference = ','.join([
             source[0] for source in cursor.execute(
@@ -487,8 +476,6 @@ class MigrateUpdateBlocklistTable(DBMigrator):
 
     def run(self) -> None:
         # V15 -> V16
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             BEGIN TRANSACTION;
@@ -535,8 +522,6 @@ class MigrateAddSpecialVersionLock(DBMigrator):
     def run(self) -> None:
         # V17 -> V18
 
-        from backend.internals.db import get_db
-
         get_db().execute("""
             ALTER TABLE volumes ADD
                 special_version_locked BOOL NOT NULL DEFAULT 0
@@ -551,8 +536,6 @@ class MigrateTPBNamingToSpecialVersionNaming(DBMigrator):
         # V18 -> V19
 
         from re import IGNORECASE, compile
-
-        from backend.internals.db import get_db
 
         cursor = get_db()
 
@@ -583,7 +566,6 @@ class MigrateAddWeTransferToPreference(DBMigrator):
     def run(self) -> None:
         # V19 -> V20
 
-        from backend.internals.db import get_db
         from backend.internals.settings import Settings
 
         service_preference = Settings().sv.service_preference
@@ -602,7 +584,7 @@ class MigrateClearUnsupportedSourceBlocklistEntries(DBMigrator):
         # V20 -> V21
 
         from backend.base.definitions import BlocklistReasonID
-        from backend.internals.db import get_db
+
         get_db().execute(
             "DELETE FROM blocklist WHERE reason = ?;",
             (BlocklistReasonID.SOURCE_NOT_SUPPORTED.value,)
@@ -616,7 +598,6 @@ class MigrateAddPixelDrainToPreference(DBMigrator):
     def run(self) -> None:
         # V21 -> V22
 
-        from backend.internals.db import get_db
         from backend.internals.settings import Settings
 
         service_preference = Settings().sv.service_preference
@@ -634,8 +615,6 @@ class MigrateAddLinksInDownloadQueue(DBMigrator):
 
     def run(self) -> None:
         # V22 -> V23
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             DROP TABLE download_queue;
@@ -670,7 +649,6 @@ class MigrateServicePreferenceToEnumValues(DBMigrator):
 
         from backend.base.definitions import GCDownloadSource
         from backend.base.helpers import CommaList
-        from backend.internals.db import get_db
         from backend.internals.settings import Settings
 
         source_string_to_enum = {
@@ -700,8 +678,6 @@ class MigrateAddLinksInBlocklist(DBMigrator):
 
     def run(self) -> None:
         # V24 -> V25
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             BEGIN TRANSACTION;
@@ -771,8 +747,6 @@ class MigrateAddLinksInHistory(DBMigrator):
     def run(self) -> None:
         # V25 -> V26
 
-        from backend.internals.db import get_db
-
         get_db().executescript("""
             BEGIN TRANSACTION;
             PRAGMA defer_foreign_keys = ON;
@@ -819,8 +793,6 @@ class MigrateAddForeignKeysToHistoryAndBlocklist(DBMigrator):
 
     def run(self) -> None:
         # V26 -> V27
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             BEGIN TRANSACTION;
@@ -892,8 +864,6 @@ class MigrateAddSiteURLToVolumes(DBMigrator):
     def run(self) -> None:
         # V27 -> V28
 
-        from backend.internals.db import get_db
-
         get_db().execute("""
             ALTER TABLE volumes ADD
                 site_url TEXT NOT NULL DEFAULT "";
@@ -907,8 +877,6 @@ class MigrateAddAltTitleToVolumes(DBMigrator):
     def run(self) -> None:
         # V28 -> V29
 
-        from backend.internals.db import get_db
-
         get_db().execute("""
             ALTER TABLE volumes ADD
                 alt_title VARCHAR(255);
@@ -921,8 +889,6 @@ class MigrateNoneToStringFlareSolverr(DBMigrator):
 
     def run(self) -> None:
         # V29 -> V30
-
-        from backend.internals.db import get_db
 
         cursor = get_db()
         value = cursor.execute("""
@@ -947,6 +913,13 @@ class MigrateRemoveUnusedSettings(DBMigrator):
 
     def run(self) -> None:
         # V30 -> V31
+
+        # This migration would remove unused settings, but one of those was
+        # used in migration V31 -> V32, so removing the unused settings was
+        # moved to that migration, after using the setting. But because people
+        # already ran this migration, their database version already updated to
+        # 31, so this migration couldn't be removed.
+
         return
 
 
@@ -956,7 +929,6 @@ class MigrateVaiNaming(DBMigrator):
     def run(self) -> None:
         # V31 -> V32
 
-        from backend.internals.db import get_db
         from backend.internals.settings import SettingsValues
 
         cursor = get_db()
@@ -989,8 +961,6 @@ class MigrateCredentials(DBMigrator):
 
     def run(self) -> None:
         # V32 -> V33
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             BEGIN TRANSACTION;
@@ -1026,8 +996,6 @@ class MigrateExternalDownloadClients(DBMigrator):
 
     def run(self) -> None:
         # V33 -> V34
-
-        from backend.internals.db import get_db
 
         get_db().executescript(
             """
@@ -1096,7 +1064,6 @@ class MigrateTypeHostingSettings(DBMigrator):
     def run(self) -> None:
         # V34 -> V35
 
-        from backend.internals.db import get_db
         from backend.internals.settings import Settings
 
         cursor = get_db()
@@ -1120,8 +1087,6 @@ class MigrateDownloadQueueToRefactor(DBMigrator):
 
     def run(self) -> None:
         # V35 -> V36
-
-        from backend.internals.db import get_db
 
         get_db().executescript("""
             DROP TABLE download_queue;
@@ -1155,8 +1120,6 @@ class MigrateMultipleCredentials(DBMigrator):
     def run(self) -> None:
         # V36 -> V37
 
-        from backend.internals.db import get_db
-
         get_db().executescript("""
             BEGIN TRANSACTION;
             PRAGMA defer_foreign_keys = ON;
@@ -1188,8 +1151,6 @@ class MigrateAddMonitorNewIssuesToVolumes(DBMigrator):
     def run(self) -> None:
         # V37 -> V38
 
-        from backend.internals.db import get_db
-
         get_db().execute("""
             ALTER TABLE volumes ADD COLUMN
                 monitor_new_issues BOOL NOT NULL DEFAULT 1;
@@ -1202,8 +1163,6 @@ class MigrateTorrentTimeoutToDownloadTimeout(DBMigrator):
 
     def run(self) -> None:
         # V38 -> V39
-
-        from backend.internals.db import get_db
 
         cursor = get_db()
 
@@ -1227,8 +1186,6 @@ class MigrateDeleteCompletedTorrentsToDownloads(DBMigrator):
 
     def run(self) -> None:
         # V39 -> V40
-
-        from backend.internals.db import get_db
 
         cursor = get_db()
 
@@ -1269,8 +1226,6 @@ class MigrateAddSuccessToDownloadHistory(DBMigrator):
 
     def run(self) -> None:
         # V41 -> V42
-
-        from backend.internals.db import get_db
 
         get_db().execute("""
             ALTER TABLE download_history ADD COLUMN

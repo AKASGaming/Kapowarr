@@ -20,7 +20,6 @@ from backend.base.definitions import (Constants, DateType,
 from backend.base.files import create_folder, folder_path
 from backend.base.helpers import CommaList
 from backend.base.logging import LOGGER, set_log_level
-from backend.internals.db_migration import migrate_db
 
 
 class KapowarrCursor(Cursor):
@@ -282,6 +281,7 @@ def setup_db() -> None:
     """
     Setup the database tables and default config when they aren't setup yet
     """
+    from backend.internals.db_migration import migrate_db
     from backend.internals.settings import Settings, task_intervals
 
     cursor = get_db()
