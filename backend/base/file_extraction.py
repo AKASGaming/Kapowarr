@@ -23,7 +23,7 @@ alphabet = {
     for letter in CharConstants.ALPHABET
 }
 
-volume_regex_snippet = r'\b(?:v(?:ol|olume)?)(?:\.\s|[\.\-\s])?(\d+(?:\s?\-\s?\d+)?|(?<!v)I{1,3})'
+volume_regex_snippet = r'\b(?:v(?:ol|olume)?)(?:\.\s|[\.\-\s])?(\d+(?:(?:\-|\s\-\s|\.\-\.)\d+)?|(?<!v)I{1,3})'
 year_regex_snippet = r'(?:(\d{4})(?:-\d{2}){0,2}|(\d{4})[\s\.]?[\-\s](?:[\s\.]?\d{4})?|(?:\d{2}-){1,2}(\d{4})|(\d{4})[\s\.\-_]Edition|(\d{4})\-\d{4}\s{3}\d{4})'
 issue_regex_snippet = r'(?!\d+(?:p|th|rd|st|\s?(?:gb|mb|kb)))(?<!\')(?<!cv[\s\-_])(?:\d+(?:\.\d{1,2}|\.?[a-z0-9]+|[\s\-\._]?[½¼])?|[½¼∞])'
 
@@ -44,10 +44,10 @@ special_version_regex = compile(r'(?:(?<!\s{3})\b|\()(?:(?P<tpb>tpb|trade paper 
 volume_regex = compile(volume_regex_snippet, IGNORECASE)
 volume_folder_regex = compile(volume_regex_snippet + r'|^(\d+)$', IGNORECASE)
 issue_regex = compile(r'\(_(\-?' + issue_regex_snippet + r')\)', IGNORECASE)
-issue_regex_2 = compile(r'(?:(?<!\()(?:(?<![a-z])c(?!2c)|\bissues?|\bbooks?)(?!\))|no)(?:\.?[\s\-_]?|\s\-\s)(?:#\s*)?(\-?' + issue_regex_snippet + r'(?:[\s\.]?\-[\s\.]?\-?' + issue_regex_snippet + r')?)\b', IGNORECASE)
+issue_regex_2 = compile(r'(?:(?<!\()(?:(?<![a-z])c(?!2c)|\bissues?|\bbooks?)(?!\))|no)(?:\.?[\s\-_]?|\s\-\s)(?:#\s*)?(\-?' + issue_regex_snippet + r'(?:(?:\-|\s\-\s|\.\-\.)\-?' + issue_regex_snippet + r')?)\b', IGNORECASE)
 issue_regex_3 = compile(r'(?<!part[\s\._])(' + issue_regex_snippet + r')[\s\-\._]?\(?[\s\-\._]?of[\s\-\._]?' + issue_regex_snippet + r'\)?', IGNORECASE)
-issue_regex_4 = compile(r'(?<!--)(?<!annual\s)(?<!pages\s)(?:#\s*)?(\-?' + issue_regex_snippet + r'[\s\.]?-[\s\.]?' + issue_regex_snippet + r')(?=\s|\.|_|(?=\()|$)', IGNORECASE)
-issue_regex_5 = compile(r'(?<!page\s)#\s*(\-?' + issue_regex_snippet + r')\b(?![\s\.]?\-[\s\.]?' + issue_regex_snippet + r')', IGNORECASE)
+issue_regex_4 = compile(r'(?<!--)(?<!annual\s)(?<!pages\s)(?:#\s*)?(\-?' + issue_regex_snippet + r'(?:\-|\s\-\s|\.\-\.)' + issue_regex_snippet + r')(?=\s|\.|_|(?=\()|$)', IGNORECASE)
+issue_regex_5 = compile(r'(?<!page\s)#\s*(\-?' + issue_regex_snippet + r')\b(?!(?:\-|\s\-\s|\.\-\.)' + issue_regex_snippet + r')', IGNORECASE)
 issue_regex_6 = compile(r'(?:(?P<i_start>^)|(?<=(?<!part)(?<!page)[\s\._])(?P<n_c>n))(\-?' + issue_regex_snippet + r')(?=(?(n_c)c\d+|\s\-)(?=\s|\.|_|(?=\()|$))', IGNORECASE)
 issue_regex_7 = compile(r'(?:(?<=\s|\.|_)|(?<=^))(\-?' + issue_regex_snippet + r')(?=\s|\.|_|\(|$)', IGNORECASE)
 year_regex = compile(r'\((?:[a-z]+\.?\s)?' + year_regex_snippet + r'\)|--' + year_regex_snippet + r'--|__' + year_regex_snippet + r'__|, ' + year_regex_snippet + r'\s{3}|\b(?:(?:\d{2}-){1,2}(\d{4})|(\d{4})(?:-\d{2}){1,2})\b', IGNORECASE)
