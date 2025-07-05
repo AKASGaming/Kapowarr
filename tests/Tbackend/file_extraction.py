@@ -138,7 +138,10 @@ class extract_filename_data(unittest.TestCase):
                 {'series': '30 Days of Night', 'year': 2002, 'volume_number': 1, 'special_version': None, 'issue_number': 4.0, 'annual': False},
 
             'X-Factor v1 -001 (1997)':
-                {'series': 'X Factor', 'year': 1997, 'volume_number': 1, 'special_version': None, 'issue_number': -1.0, 'annual': False}
+                {'series': 'X Factor', 'year': 1997, 'volume_number': 1, 'special_version': None, 'issue_number': -1.0, 'annual': False},
+
+            'A+X 002 (2013) 03 of 04 covers.cbz':
+                {'series': 'A X', 'year': 2013, 'volume_number': 1, 'special_version': None, 'issue_number': 2.0, 'annual': False}
         }
         self.run_cases(cases)
 
