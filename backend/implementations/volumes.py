@@ -44,9 +44,9 @@ from backend.internals.db_models import FilesDB, GeneralFilesDB
 from backend.internals.server import WebSocket
 from backend.internals.settings import Settings
 
-THIRTY_DAYS = timedelta(days=30)
-SECONDS_IN_DAY = 86400
 # autopep8: off
+ONE_DAY = timedelta(days=1)
+THIRTY_DAYS = timedelta(days=30)
 split_regex = compile(r'(?<!vs)(?<!r\.i\.p)(?:(?<=[\.!\?])\s|(?<=[\.!\?]</p>)(?!$))', IGNORECASE)
 remove_link_regex = compile(r'<a[^>]*>.*?</a>', IGNORECASE)
 omnibus_regex = compile(r'\bomnibus\b', IGNORECASE)
@@ -1537,8 +1537,9 @@ def refresh_and_scan(
     """
     cursor = get_db()
 
-    one_day_ago = round(time()) - SECONDS_IN_DAY
-    five_days_ago = round(time()) - (5 * SECONDS_IN_DAY)
+    current_time = datetime.now()
+    one_day_ago = current_time - ONE_DAY
+    thirty_days_ago = current_time - THIRTY_DAYS
     if volume_id:
         cursor.execute("""
             SELECT comicvine_id, id, last_cv_fetch
@@ -1564,7 +1565,7 @@ def refresh_and_scan(
             WHERE last_cv_fetch <= ?
             ORDER BY last_cv_fetch ASC;
             """,
-            (one_day_ago,)
+            (one_day_ago.timestamp(),)
         )
 
     cv_to_id_fetch: Dict[int, Tuple[int, int]] = {
@@ -1589,14 +1590,14 @@ def refresh_and_scan(
             WHERE v.last_cv_fetch <= ?
             GROUP BY i.volume_id;
             """,
-            (one_day_ago,)
+            (one_day_ago.timestamp(),)
         ))
 
         filtered_volume_datas = [
             v
             for v in volume_datas
             if cv_id_to_issue_count[v["comicvine_id"]] != v["issue_count"]
-            or cv_to_id_fetch[v["comicvine_id"]][1] <= five_days_ago
+            or cv_to_id_fetch[v["comicvine_id"]][1] <= thirty_days_ago.timestamp()
         ]
 
     cursor.executemany(
@@ -1624,7 +1625,7 @@ def refresh_and_scan(
                 "description": vd["description"],
                 "site_url": vd["site_url"],
                 "cover": vd["cover"],
-                "last_cv_fetch": one_day_ago + SECONDS_IN_DAY,
+                "last_cv_fetch": current_time.timestamp(),
 
                 "id": cv_to_id_fetch[vd["comicvine_id"]][0]
             }
