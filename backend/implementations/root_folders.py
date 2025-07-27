@@ -29,7 +29,7 @@ class RootFolders(metaclass=Singleton):
         """Update the cache."""
         root_folders = get_db().execute(
             "SELECT id, folder FROM root_folders;"
-        )
+        ).fetchall()
 
         for _ in range(2):
             try:
