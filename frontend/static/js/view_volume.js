@@ -45,10 +45,13 @@ const ViewEls = {
 // Filling data
 //
 class IssueEntry {
-	constructor(id, api_key) {
+	constructor(id, api_key, row_entry=null) {
 		this.id = id;
 		this.api_key = api_key;
-		this.entry = ViewEls.issues_list.querySelector(`tr[data-id="${id}"]`);
+		if (row_entry !== null)
+			this.entry = row_entry;
+		else
+			this.entry = ViewEls.issues_list.querySelector(`tr[data-id="${id}"]`);
 
 		this.monitored = this.entry.querySelector('.issue-monitored button');
 		this.issue_number = this.entry.querySelector('.issue-number');
@@ -108,11 +111,11 @@ function fillTable(issues, api_key) {
 	for (i = issues.length - 1; i >= 0; i--) {
 		const obj = issues[i];
 
-		const entry = ViewEls.pre_build.issue_entry.cloneNode(deep=true);
+		const entry = ViewEls.pre_build.issue_entry.cloneNode(true);
 		entry.dataset.id = obj.id;
 		ViewEls.issues_list.appendChild(entry);
 
-		const inst = new IssueEntry(obj.id, api_key);
+		const inst = new IssueEntry(obj.id, api_key, entry);
 
 		// ARIA
 		inst.entry.ariaLabel = `Issue ${obj.issue_number}`;
