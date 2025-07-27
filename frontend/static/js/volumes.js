@@ -89,7 +89,7 @@ class LibraryEntry {
 		total_count
 	) {
 		downloaded_count = Math.min(downloaded_count, total_count);
-		
+
 		const progress = downloaded_count / total_count * 100;
 		const list_bar = this.list_entry.querySelector('.list-prog-bar'),
 			table_bar = this.table_entry.querySelector('.table-prog-bar');
@@ -127,6 +127,9 @@ function populateLibrary(volumes, api_key) {
 	);
 	library_els.views.table.innerHTML = '';
 	const space_taker = document.querySelector('.space-taker');
+
+	const list_fragment = document.createDocumentFragment(),
+		table_fragment = document.createDocumentFragment();
 
 	volumes.forEach(volume => {
 		const list_entry = pre_build_els.list_entry.cloneNode(true),
@@ -188,9 +191,12 @@ function populateLibrary(volumes, api_key) {
 		);
 
 		// Add to view
-		library_els.views.list.insertBefore(list_entry, space_taker);
-		library_els.views.table.appendChild(table_entry);
+		list_fragment.appendChild(list_entry)
+		table_fragment.appendChild(table_entry);
 	});
+
+	library_els.views.list.insertBefore(list_fragment, space_taker);
+	library_els.views.table.appendChild(table_fragment);
 };
 
 function fetchLibrary(api_key) {
