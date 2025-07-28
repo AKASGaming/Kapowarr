@@ -237,10 +237,7 @@ function connectToWebSocket() {
 		closeOnBeforeunload: true
 	});
 	socket.on('connect', () => console.log('Connected to WebSocket'));
-	socket.on('disconnect', () => {
-		console.log('Disconnected from WebSocket')
-		setTimeout(() => window.location.reload(), 500);
-	});
+	socket.on('disconnect', () => console.log('Disconnected from WebSocket'));
 
 	socket.on('task_added', handleTaskAdded);
 	socket.on('task_ended', handleTaskRemoved);
