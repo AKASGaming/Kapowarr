@@ -878,7 +878,7 @@ class Session(RSession):
                 round == 1
                 and result.status_code == 403
             ):
-                fs_result = self.fs.handle_cf_block(url, result.headers)
+                fs_result = self.fs.handle_cf_block(result.url, result.headers)
 
                 if not fs_result:
                     # FlareSolverr couldn't solve the problem or it wasn't
