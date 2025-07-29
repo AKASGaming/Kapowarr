@@ -48,11 +48,13 @@ usingApiKey()
 		e => {
 			StatEls.buttons.restart.innerText = 'Restarting';
 			sendAPI('POST', '/system/power/restart', api_key);
+			setTimeout(() => window.location.reload(), 500);
 		};
 	StatEls.buttons.shutdown.onclick =
 		e => {
 			StatEls.buttons.shutdown.innerText = 'Shutting down';
 			sendAPI('POST', '/system/power/shutdown', api_key);
+			setTimeout(() => window.location.reload(), 500);
 		};
 });
 
