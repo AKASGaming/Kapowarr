@@ -185,7 +185,7 @@ noscript {
 /* Body */
 /*  */
 body {
-	height: 100vh;
+	height: 100dvh;
 	display: flex;
 	flex-direction: column;
 	overflow-y: auto;
@@ -302,7 +302,7 @@ nav svg {
 }
 
 main {
-	height: calc(100vh - var(--header-height));
+	height: calc(100dvh - var(--header-height));
 	width: 100%;
 
 	display: flex;
