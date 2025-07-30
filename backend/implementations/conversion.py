@@ -81,6 +81,7 @@ class FileConversionHandler:
         for source_format, target_formats in FileConversionHandler.get_conversion_methods().items():
             if 'folder' in target_formats:
                 result.append(source_format)
+
         return result
 
     @staticmethod
@@ -183,7 +184,8 @@ def preview_mass_convert(
 
         if (
             extract_issue_ranges
-            and splitext(f)[1].lower() in FileConversionHandler.get_convertible_to_folder()
+            and splitext(f)[1].lower().lstrip('.')
+                in FileConversionHandler.get_convertible_to_folder()
             and archive_contains_issues(f)
         ):
             converter = FileConversionHandler(f, ['folder']).converter
@@ -248,7 +250,8 @@ def mass_convert(
         converted = False
         if (
             extract_issue_ranges
-            and splitext(f)[1].lower() in FileConversionHandler.get_convertible_to_folder()
+            and splitext(f)[1].lower().lstrip('.')
+                in FileConversionHandler.get_convertible_to_folder()
             and archive_contains_issues(f)
         ):
             converter = FileConversionHandler(f, ['folder'])
