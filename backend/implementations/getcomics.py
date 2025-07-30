@@ -774,8 +774,12 @@ async def search_getcomics(
     # Fetch first page and determine max pages
     first_page = await session.get_text(
         Constants.GC_SITE_URL,
-        params={"s": query}
+        params={"s": query},
+        quiet_fail=True
     )
+    if not first_page:
+        return []
+
     first_soup = BeautifulSoup(first_page, "html.parser")
     max_page = min(
         _get_max_page(first_soup),
@@ -786,7 +790,8 @@ async def search_getcomics(
     other_tasks = [
         session.get_text(
             f"{Constants.GC_SITE_URL}/page/{page}",
-            params={"s": query}
+            params={"s": query},
+            quiet_fail=True
         )
         for page in range(2, max_page + 1)
     ]
@@ -804,6 +809,7 @@ async def search_getcomics(
     other_soups = [
         BeautifulSoup(html, "html.parser")
         for html in other_htmls
+        if html
     ]
 
     # Process the search results on each page

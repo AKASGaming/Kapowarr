@@ -1007,7 +1007,8 @@ class AsyncSession(ClientSession):
         self,
         url: str,
         params: Dict[str, Any] = {},
-        headers: Dict[str, Any] = {}
+        headers: Dict[str, Any] = {},
+        quiet_fail: bool = False
     ) -> str:
         """Fetch a page and return the body.
 
@@ -1017,18 +1018,28 @@ class AsyncSession(ClientSession):
                 Defaults to {}.
             headers (Dict[str, Any], optional): Any additional headers.
                 Defaults to {}.
+            quiet_fail (bool, optional): If True, don't raise an exception
+                if the request fails. Return an empty string instead.
+                Defaults to False.
 
         Returns:
             str: The body of the response.
         """
-        async with self.get(url, params=params, headers=headers) as response:
-            return await response.text()
+        try:
+            async with self.get(url, params=params, headers=headers) as response:
+                return await response.text()
+
+        except ClientError as e:
+            if quiet_fail:
+                return ''
+            raise e
 
     async def get_content(
         self,
         url: str,
         params: Dict[str, Any] = {},
-        headers: Dict[str, Any] = {}
+        headers: Dict[str, Any] = {},
+        quiet_fail: bool = False
     ) -> bytes:
         """Fetch a page and return the content in bytes.
 
@@ -1038,12 +1049,21 @@ class AsyncSession(ClientSession):
                 Defaults to {}.
             headers (Dict[str, Any], optional): Any additional headers.
                 Defaults to {}.
+            quiet_fail (bool, optional): If True, don't raise an exception
+                if the request fails. Return an empty bytestring instead.
+                Defaults to False.
 
         Returns:
             bytes: The content of the response.
         """
-        async with self.get(url, params=params, headers=headers) as response:
-            return await response.content.read()
+        try:
+            async with self.get(url, params=params, headers=headers) as response:
+                return await response.content.read()
+
+        except ClientError as e:
+            if quiet_fail:
+                return b''
+            raise e
 
 
 # region Multiprocessing
