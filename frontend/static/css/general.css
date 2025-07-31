@@ -116,8 +116,10 @@ noscript {
 }
 
 ::-webkit-scrollbar {
-	width: 12px;
-	height: 12px;
+	/* For vertical scrollbars */
+	width: 10px;
+	/* For horizontal scrollbars */
+	height: 10px;
 	background-color: var(--background-color);
 }
 
@@ -484,6 +486,11 @@ main > *:not(.tool-bar-container) {
 }
 
 @media (max-width: 720px) {
+	::-webkit-scrollbar {
+		width: 4px;
+		height: 4px;
+	}
+
 	#toggle-nav {
 		display: inline-flex;
 	}
