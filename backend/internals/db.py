@@ -221,12 +221,6 @@ def commit() -> None:
     return
 
 
-def rollback() -> None:
-    """Rollback uncommited changes in the database"""
-    get_db().connection.rollback()
-    return
-
-
 def iter_commit(iterable: Iterable[T]) -> Generator[T, Any, Any]:
     """Commit the database after each iteration. Also commits just before the
     first iteration starts.
