@@ -141,7 +141,13 @@ class extract_filename_data(unittest.TestCase):
                 {'series': 'X Factor', 'year': 1997, 'volume_number': 1, 'special_version': None, 'issue_number': -1.0, 'annual': False},
 
             'A+X 002 (2013) 03 of 04 covers.cbz':
-                {'series': 'A X', 'year': 2013, 'volume_number': 1, 'special_version': None, 'issue_number': 2.0, 'annual': False}
+                {'series': 'A X', 'year': 2013, 'volume_number': 1, 'special_version': None, 'issue_number': 2.0, 'annual': False},
+
+            'DC vs Vampires World War V 003 (2024)':
+                {'series': 'DC vs Vampires World War V', 'year': 2024, 'volume_number': 1, 'special_version': None, 'issue_number': 3.0, 'annual': False},
+
+            'DC vs. Vampires World War V Issue 002 (2024)':
+                {'series': 'DC vs. Vampires World War V', 'year': 2024, 'volume_number': 1, 'special_version': None, 'issue_number': 2.0, 'annual': False}
         }
         self.run_cases(cases)
 
