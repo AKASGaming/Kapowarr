@@ -437,7 +437,9 @@ def _create_link_paths(
         if (
             volume_data.special_version == SpecialVersion.VOLUME_AS_ISSUE
             and (
-                group["info"]['special_version'] == SpecialVersion.TPB
+                group["info"]['special_version'] in (
+                    SpecialVersion.TPB, SpecialVersion.OMNIBUS
+                )
                 or isinstance(group["info"]['volume_number'], tuple)
             )
         ):
@@ -729,8 +731,8 @@ async def _test_paths(
     Returns:
         List[Download]: A list of downloads.
     """
-    downloads: Tuple[Union[Download, None]] = tuple()
-    limit_reached: Tuple[bool] = tuple()
+    downloads: Tuple[Union[Download, None], ...] = tuple()
+    limit_reached: Tuple[bool, ...] = tuple()
     for path in link_paths:
         downloads, limit_reached = zip(*(await gather(*(
             __purify_download_group(
@@ -743,12 +745,13 @@ async def _test_paths(
             )
             for group in path
         ))))
+        downloads = tuple(d for d in downloads if d is not None)
 
         if not downloads:
             continue
 
         LOGGER.debug(f'Chosen links: {downloads}')
-        return [d for d in downloads if d is not None]
+        return list(downloads)
 
     # Nothing worked
     if any(limit_reached):
