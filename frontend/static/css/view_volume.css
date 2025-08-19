@@ -86,6 +86,10 @@ This flows better for ARIA.
 	font-size: .9rem;
 }
 
+#volume-path {
+	white-space: pre-wrap;
+}
+
 #volume-description-mobile {
 	display: none;
 }
