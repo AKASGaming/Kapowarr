@@ -147,7 +147,10 @@ class extract_filename_data(unittest.TestCase):
                 {'series': 'DC vs Vampires World War V', 'year': 2024, 'volume_number': 1, 'special_version': None, 'issue_number': 3.0, 'annual': False},
 
             'DC vs. Vampires World War V Issue 002 (2024)':
-                {'series': 'DC vs. Vampires World War V', 'year': 2024, 'volume_number': 1, 'special_version': None, 'issue_number': 2.0, 'annual': False}
+                {'series': 'DC vs. Vampires World War V', 'year': 2024, 'volume_number': 1, 'special_version': None, 'issue_number': 2.0, 'annual': False},
+
+            '/Blacksad/Blacksad 6.1 - They All Fall Down Part 1.cbz':
+                {'series': 'Blacksad', 'year': None, 'volume_number': 1, 'special_version': None, 'issue_number': 6.1, 'annual': False}
         }
         self.run_cases(cases)
 

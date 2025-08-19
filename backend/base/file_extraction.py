@@ -49,7 +49,7 @@ issue_regex_3 = compile(r'(?<!part[\s\._])(' + issue_regex_snippet + r')[\s\-\._
 issue_regex_4 = compile(r'(?<!--)(?<!annual\s)(?<!pages\s)(?:#\s*)?(\-?' + issue_regex_snippet + r'(?:\-|\s\-\s|\.\-\.)' + issue_regex_snippet + r')(?=\s|\.|_|(?=\()|$)', IGNORECASE)
 issue_regex_5 = compile(r'(?<!page\s)#\s*(\-?' + issue_regex_snippet + r')\b(?!(?:\-|\s\-\s|\.\-\.)' + issue_regex_snippet + r')', IGNORECASE)
 issue_regex_6 = compile(r'(?:(?P<i_start>^)|(?<=(?<!part)(?<!page)[\s\._])(?P<n_c>n))(\-?' + issue_regex_snippet + r')(?=(?(n_c)c\d+|\s\-)(?=\s|\.|_|(?=\()|$))', IGNORECASE)
-issue_regex_7 = compile(r'(?:(?<=\s|\.|_)|(?<=^))(\-?' + issue_regex_snippet + r')(?![\s\-\._]covers?)(?![\s\-\._]of[\s\-\._]\d+[\s\-\._]covers?)(?=\s|\.|_|\(|$)', IGNORECASE)
+issue_regex_7 = compile(r'(?:part[\s\._]|(?<=[\s\._])|^)(\-?' + issue_regex_snippet + r')(?![\s\-\._]covers?)(?![\s\-\._]of[\s\-\._]\d+[\s\-\._]covers?)(?=\s|\.|_|\(|$)', IGNORECASE)
 year_regex = compile(r'\((?:[a-z]+\.?\s)?' + year_regex_snippet + r'\)|--' + year_regex_snippet + r'--|__' + year_regex_snippet + r'__|, ' + year_regex_snippet + r'\s{3}|\b(?:(?:\d{2}-){1,2}(\d{4})|(\d{4})(?:-\d{2}){1,2})\b', IGNORECASE)
 series_regex = compile(r'(^(\d+\.)?\s+|^\d+\s{3}|\s(?=\s)|[\s,]+$)')
 annual_regex = compile(r'(?:\+|plus)[\s\._]?annuals?|annuals?[\s\._]?(?:\+|plus)|^((?!annuals?).)*$', IGNORECASE) # If regex matches, it's NOT an annual
@@ -232,14 +232,18 @@ def _find_issue_numbers(
 ):
     for file_part_with_issue, pos_option, regex_list in pos_options:
         for regex in regex_list:
-            regex_result = list(regex.finditer(
-                file_part_with_issue, **pos_option
-            ))
+            regex_result = sorted(
+                regex.finditer(
+                    file_part_with_issue, **pos_option
+                ),
+                key=lambda m: ("part" not in m.group(0).lower(), m.start(0)),
+                reverse=True
+            )
             if not regex_result:
                 continue
 
             group_number = 1 if regex is not issue_regex_6 else 3
-            for result in reversed(regex_result):
+            for result in regex_result:
                 yield (
                     result.group(group_number),
                     result.start(0), result.end(0)
