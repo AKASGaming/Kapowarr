@@ -756,13 +756,13 @@ usingApiKey()
 	ViewEls.tool_bar.edit.onclick = e => showEdit(api_key);
 
 	document.querySelector('#submit-rename').onclick =
-		e => renameVolume(api_key, e.target.dataset.issue_id || null);
+		e => renameVolume(api_key, parseInt(e.target.dataset.issue_id) || null);
 
 	document.querySelector('#submit-convert').onclick =
-		e => convertVolume(api_key, e.target.dataset.issue_id || null);
+		e => convertVolume(api_key, parseInt(e.target.dataset.issue_id) || null);
 
 	document.querySelector('#issue-rename-selector').onclick =
-		e => showRename(api_key, e.target.dataset.issue_id);
+		e => showRename(api_key, parseInt(e.target.dataset.issue_id));
 
 	socket.on(
 		'downloaded_status',
