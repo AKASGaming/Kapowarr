@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from os import utime
 from os.path import basename, dirname, getmtime, join, splitext
-from shutil import make_archive
 from subprocess import run
 from sys import platform
 from typing import TYPE_CHECKING, List, final
@@ -17,7 +16,8 @@ from zipfile import ZipFile
 from backend.base.definitions import (SCANNABLE_EXTENSIONS, Constants,
                                       FileConstants, FileConverter)
 from backend.base.file_extraction import extract_filename_data
-from backend.base.files import (create_folder, delete_empty_parent_folders,
+from backend.base.files import (create_folder, create_zip_archive,
+                                delete_empty_parent_folders,
                                 delete_file_folder, folder_path,
                                 generate_archive_folder, list_files,
                                 rename_file, set_detected_extension)
@@ -318,14 +318,14 @@ class RARtoZIP(FileConverter):
                     (Constants.ZIP_MIN_MOD_TIME, Constants.ZIP_MIN_MOD_TIME)
                 )
 
-        target_file = splitext(file)[0]
-        target_archive = make_archive(target_file, 'zip', archive_folder)
+        target_file = splitext(file)[0] + '.zip'
+        create_zip_archive(archive_folder, target_file)
 
         delete_file_folder(archive_folder)
         delete_file_folder(file)
         delete_empty_parent_folders(dirname(file), volume_folder)
 
-        return [target_archive]
+        return [target_file]
 
 
 @final

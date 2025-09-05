@@ -8,7 +8,7 @@ from random import randint
 from re import compile, search
 from time import perf_counter, time
 from typing import Any, Callable, Dict, Generator, List, Sequence, Tuple, Union
-from zipfile import ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from requests.exceptions import (JSONDecodeError as RequestsJSONDecodeError,
@@ -859,7 +859,7 @@ class MegaFolder(MegaABC):
         self.downloading = True
         size_downloaded = 0
 
-        with ZipFile(filename, 'w') as zip:
+        with ZipFile(filename, 'w', ZIP_DEFLATED) as zip:
             for file in self.files:
                 k, iv, meta_mac = MegaCrypto.get_cipher_key(
                     file["key"]
