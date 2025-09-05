@@ -16,6 +16,7 @@ from backend.base.logging import LOGGER
 from backend.implementations.converters import run_rar
 from backend.implementations.volumes import Volume, scan_files
 from backend.internals.db import commit
+from backend.internals.db_models import FilesDB
 from backend.internals.server import WebSocket
 from backend.internals.settings import Settings
 
@@ -301,6 +302,13 @@ def mass_convert(
                     planned_conversions
                 ))
 
-    scan_files(volume_id, update_websocket=update_websocket_files)
+    FilesDB.delete_filepaths((
+        f.file for f in planned_conversions
+    ))
+    scan_files(
+        volume_id,
+        filepath_filter=result,
+        update_websocket=update_websocket_files
+    )
 
     return result
