@@ -42,7 +42,7 @@ def remove_from_queue(download: Download) -> None:
     get_db().execute(
         "DELETE FROM download_queue WHERE id = ?",
         (download.id,)
-    )
+    ).connection.commit()
     return
 
 
