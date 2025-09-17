@@ -85,7 +85,7 @@ class KapowarrCursor(Cursor):
             else:
                 self.execute("COMMIT;")
 
-        self.connection.isolation_level = ""
+        self.connection.isolation_level = "DEFERRED"
         return
 
 

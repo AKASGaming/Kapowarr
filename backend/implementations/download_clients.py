@@ -6,7 +6,7 @@ All download implementations.
 
 from __future__ import annotations
 
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from os.path import basename, join, sep, splitext
 from re import IGNORECASE, compile
 from threading import Event, Thread
@@ -408,12 +408,17 @@ class MediaFireDownload(BaseDirectDownload):
 
         soup = BeautifulSoup(r.text, 'html.parser')
         button = soup.find('a', {'id': 'downloadButton'})
-        if isinstance(button, Tag):
+        if not isinstance(button, Tag):
+            raise LinkBroken(BlocklistReason.LINK_BROKEN)
+
+        if button['href'].startswith('http'):
             return first_of_range(button['href'])
 
-        # Link is not broken and not a folder
-        # but we still can't find the download button...
-        raise LinkBroken(BlocklistReason.LINK_BROKEN)
+        elif button['data-scrambled-url']:
+            return b64decode(button['data-scrambled-url']).decode('utf-8')
+
+        else:
+            raise LinkBroken(BlocklistReason.LINK_BROKEN)
 
 
 # region MediaFire Folder
