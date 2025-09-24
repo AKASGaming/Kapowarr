@@ -167,6 +167,7 @@ function deleteTorrent(api_key) {
 	sendAPI('DELETE', `/externalclients/${id}`, api_key)
 	.then(response => {
 		loadTorrentClients(api_key);
+		fillRemoteMappings(api_key);
 		closeWindow();
 	})
 	.catch(e => {
@@ -281,15 +282,26 @@ async function testAddTorrent(api_key) {
 function loadTorrentClients(api_key) {
 	fetchAPI('/externalclients', api_key)
 	.then(json => {
-		const table = document.querySelector('#torrent-client-list');
+		const table = document.querySelector('#torrent-client-list'),
+			add_mapping_select = document.querySelector('#add-mapping-client-input'),
+			edit_mapping_select = document.querySelector('#edit-mapping-client-input');
+
 		document.querySelectorAll('#torrent-client-list > :not(:first-child)')
 			.forEach(el => el.remove());
+		add_mapping_select.innerHTML = ''
+		edit_mapping_select.innerHTML = ''
 
 		json.result.forEach(client => {
 			const entry = document.createElement('button');
 			entry.onclick = (e) => loadEditTorrent(api_key, client.id);
 			entry.innerText = client.title;
 			table.appendChild(entry);
+
+			const option = document.createElement('option');
+			option.innerText = client.title;
+			option.value = client.id;
+			add_mapping_select.appendChild(option);
+			edit_mapping_select.appendChild(option.cloneNode(true));
 		});
 	});
 };
@@ -320,7 +332,7 @@ function fillCredentials(api_key) {
 			};
 		});
 	});
-	
+
 	document.querySelectorAll('#mega-form input, #pixeldrain-form input').forEach(
 		i => i.value = ''
 	);
@@ -343,7 +355,7 @@ function addCredential() {
 			source: source,
 			api_key: document.querySelector('#add-pixeldrain .pixeldrain-key input').value
 		};
-	
+
 	usingApiKey().then(api_key => {
 		sendAPI('POST', '/credentials', api_key, {}, data)
 		.then(response => fillCredentials(api_key))
@@ -359,12 +371,113 @@ function addCredential() {
 	});
 };
 
+const remoteMappings = {}
+async function fillRemoteMappings(api_key) {
+	const table = document.querySelector("#remote-mapping-list")
+	table.innerHTML = ''
+
+	const externalClients = await fetchAPI('/externalclients', api_key)
+	const clientNames = Object.fromEntries(
+		externalClients.result.map(c => [c.id, c.title])
+	)
+
+	const remoteMappingsResult = await fetchAPI('/remotemapping', api_key)
+	remoteMappingsResult.result.forEach(m => {
+		remoteMappings[m.id] = m
+
+		const row = document.querySelector('.pre-build-els .remote-mapping-entry').cloneNode(true)
+		row.dataset.id = m.id
+		row.querySelector(".mapping-client").innerText = clientNames[m.external_download_client_id]
+		row.querySelector(".mapping-remote").innerText = m.remote_path
+		row.querySelector(".mapping-local").innerText = m.local_path
+		row.querySelector(".edit-mapping").onclick = e => showEditRemoteMapping(m.id)
+		row.querySelector(".delete-mapping").onclick = e => deleteRemoteMapping(m.id)
+
+		table.appendChild(row)
+	})
+}
+
+function showAddRemoteMapping() {
+	hide([document.querySelector('#add-mapping-error')])
+	document.querySelector('#add-mapping-remote-input').value = ''
+	document.querySelector('#add-mapping-local-input').value = ''
+	showWindow("add-mapping-window")
+}
+
+async function addRemoteMapping() {
+	const data = {
+		external_download_client_id: parseInt(document.querySelector('#add-mapping-client-input').value),
+		remote_path: document.querySelector('#add-mapping-remote-input').value,
+		local_path: document.querySelector('#add-mapping-local-input').value
+	}
+
+	const api_key = await usingApiKey()
+	sendAPI("POST", "/remotemapping", api_key, {}, data)
+	.then(response => {
+		fillRemoteMappings(api_key)
+		closeWindow()
+	})
+	.catch(async e => {
+		const json = await e.json()
+		if (json.error === "FolderNotFound") {
+			document.querySelector('#add-mapping-error').innerText = "Local folder not found"
+		} else if (json.error === "RemoteMappingInvalid") {
+			document.querySelector('#add-mapping-error').innerText = "The local path or remote path is a child or parent of another local/remote path for the client"
+		}
+		hide([], [document.querySelector("#add-mapping-error")])
+	})
+}
+
+function showEditRemoteMapping(id) {
+	const data = remoteMappings[id]
+
+	document.querySelector("#edit-mapping-window").dataset.id = id
+	hide([document.querySelector('#edit-mapping-error')])
+	document.querySelector('#edit-mapping-client-input').value = data.external_download_client_id
+	document.querySelector('#edit-mapping-remote-input').value = data.remote_path
+	document.querySelector('#edit-mapping-local-input').value = data.local_path
+	showWindow("edit-mapping-window")
+}
+
+async function editRemoteMapping() {
+	const id = parseInt(document.querySelector("#edit-mapping-window").dataset.id),
+		data = {
+			external_download_client_id: parseInt(document.querySelector('#edit-mapping-client-input').value),
+			remote_path: document.querySelector('#edit-mapping-remote-input').value,
+			local_path: document.querySelector('#edit-mapping-local-input').value
+		},
+		api_key = await usingApiKey()
+	
+	sendAPI("PUT", `/remotemapping/${id}`, api_key, {}, data)
+	.then(response => {
+		fillRemoteMappings(api_key)
+		closeWindow()
+	})
+	.catch(async e => {
+		const json = await e.json()
+		if (json.error === "FolderNotFound") {
+			document.querySelector('#edit-mapping-error').innerText = "Local folder not found"
+		} else if (json.error === "RemoteMappingInvalid") {
+			document.querySelector('#edit-mapping-error').innerText = "The local path or remote path is a child or parent of another local/remote path for the client"
+		}
+		hide([], [document.querySelector("#edit-mapping-error")])
+	})
+}
+
+async function deleteRemoteMapping(id) {
+	const api_key = await usingApiKey()
+	sendAPI("DELETE", `/remotemapping/${id}`, api_key)
+	document.querySelector(`#remote-mapping-list > tr[data-id="${id}"]`).remove()
+}
+
+
 // code run on load
 
 usingApiKey()
 .then(api_key => {
 	fillCredentials(api_key);
 	loadTorrentClients(api_key);
+	fillRemoteMappings(api_key);
 	document.querySelector('#delete-torrent-edit').onclick = e => deleteTorrent(api_key);
 	document.querySelector('#test-torrent-edit').onclick = e => testEditTorrent(api_key);
 	document.querySelector('#test-torrent-add').onclick = e => testAddTorrent(api_key);
@@ -386,3 +499,6 @@ document.querySelectorAll('#builtin-client-list > button').forEach(b => {
 		showWindow('builtin-window');
 	};
 });
+document.querySelector('#add-mapping-form').action = 'javascript:addRemoteMapping()'
+document.querySelector('#add-remote-mapping').onclick = e => showAddRemoteMapping()
+document.querySelector('#edit-mapping-form').action = 'javascript:editRemoteMapping()'

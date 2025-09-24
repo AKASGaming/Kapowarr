@@ -518,6 +518,13 @@ class FilenameData(TypedDict):
     annual: bool
 
 
+class RemoteMappingData(TypedDict):
+    id: int
+    external_download_client_id: int
+    remote_path: str
+    local_path: str
+
+
 class SearchResultData(FilenameData):
     link: str
     display_title: str

@@ -32,6 +32,7 @@ from backend.implementations.direct_clients.mega import (Mega, MegaABC,
                                                          MegaFolder)
 from backend.implementations.external_clients import ExternalClients
 from backend.implementations.naming import generate_issue_name
+from backend.implementations.remote_mapping import RemoteMappings
 from backend.implementations.volumes import Issue, Volume
 from backend.internals.server import WebSocket
 from backend.internals.settings import Settings
@@ -842,7 +843,10 @@ class TorrentDownload(ExternalDownload, BaseDirectDownload):
     def run(self) -> None:
         self._external_id = self.external_client.add_download(
             self.download_link,
-            self._download_folder,
+            RemoteMappings.local_to_remote(
+                self._external_client.id,
+                self._download_folder
+            ),
             self.title
         )
         return
