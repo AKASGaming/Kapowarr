@@ -449,7 +449,7 @@ def api_rootfolder():
 
     if request.method == 'GET':
         result = [
-            rf.as_dict()
+            rf.todict()
             for rf in root_folders.get_all()
         ]
         return return_api(result)
@@ -459,7 +459,7 @@ def api_rootfolder():
         folder = data.get('folder')
         if folder is None:
             raise KeyNotFound('folder')
-        root_folder = root_folders.add(folder).as_dict()
+        root_folder = root_folders.add(folder).todict()
         return return_api(root_folder, code=201)
 
 
@@ -470,7 +470,7 @@ def api_rootfolder_id(id: int):
     root_folders = RootFolders()
 
     if request.method == 'GET':
-        root_folder = root_folders.get_one(id).as_dict()
+        root_folder = root_folders.get_one(id).todict()
         return return_api(root_folder)
 
     elif request.method == 'PUT':
@@ -1026,7 +1026,7 @@ def api_blocklist():
 
         blocklist = get_blocklist(offset)
         result = [
-            b.as_dict()
+            b.todict()
             for b in blocklist
         ]
         return return_api(result)
@@ -1109,7 +1109,7 @@ def api_blocklist():
             volume_id=volume_id,
             issue_id=issue_id,
             reason=reason
-        ).as_dict()
+        ).todict()
         return return_api(result, code=201)
 
     elif request.method == 'DELETE':
@@ -1122,7 +1122,7 @@ def api_blocklist():
 @auth
 def api_blocklist_entry(id: int):
     if request.method == 'GET':
-        result = get_blocklist_entry(id).as_dict()
+        result = get_blocklist_entry(id).todict()
         return return_api(result)
 
     elif request.method == 'DELETE':
@@ -1141,7 +1141,7 @@ def api_credentials():
 
     if request.method == 'GET':
         result = [
-            c.as_dict()
+            c.todict()
             for c in cred.get_all()
         ]
         return return_api(result)
@@ -1170,7 +1170,7 @@ def api_credentials():
             password=data.get("password"),
             api_key=data.get("api_key")
         ))
-        return return_api(result.as_dict(), code=201)
+        return return_api(result.todict(), code=201)
 
 
 @api.route('/credentials/<int:id>', methods=['GET', 'DELETE'])
@@ -1179,7 +1179,7 @@ def api_credentials():
 def api_credential(id: int):
     cred = Credentials()
     if request.method == 'GET':
-        result = cred.get_one(id).as_dict()
+        result = cred.get_one(id).todict()
         return return_api(result)
 
     elif request.method == 'DELETE':

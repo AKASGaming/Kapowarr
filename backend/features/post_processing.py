@@ -10,8 +10,8 @@ from os.path import basename, exists, isfile, join, splitext
 from time import time
 from typing import TYPE_CHECKING, List, Tuple
 
-from backend.base.definitions import (SCANNABLE_EXTENSIONS,
-                                      BlocklistReason, DownloadState)
+from backend.base.definitions import (BlocklistReason,
+                                      DownloadState, FileConstants)
 from backend.base.files import (copy_directory, delete_file_folder,
                                 rename_file, set_detected_extension)
 from backend.base.logging import LOGGER
@@ -111,7 +111,7 @@ def move_to_dest(download: Download) -> None:
 
     folder = Volume(download.volume_id).vd.folder
     extension = splitext(download.files[0])[1].lower()
-    if extension not in SCANNABLE_EXTENSIONS:
+    if extension not in FileConstants.SCANNABLE_EXTENSIONS:
         extension = ''
 
     file_dest = join(

@@ -13,8 +13,7 @@ from sys import platform
 from typing import TYPE_CHECKING, List, final
 from zipfile import ZipFile
 
-from backend.base.definitions import (SCANNABLE_EXTENSIONS, Constants,
-                                      FileConstants, FileConverter)
+from backend.base.definitions import Constants, FileConstants, FileConverter
 from backend.base.file_extraction import extract_filename_data
 from backend.base.files import (create_folder, create_zip_archive,
                                 delete_empty_parent_folders,
@@ -64,7 +63,7 @@ def extract_files_from_folder(
     """
     folder_contents = list_files(
         source_folder,
-        SCANNABLE_EXTENSIONS
+        FileConstants.SCANNABLE_EXTENSIONS
     )
 
     volume = Volume(volume_id)

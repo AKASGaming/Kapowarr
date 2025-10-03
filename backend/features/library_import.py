@@ -7,9 +7,9 @@ from os.path import abspath, basename, dirname, isfile, splitext
 from typing import Any, Dict, List, Union
 
 from backend.base.custom_exceptions import InvalidKeyValue, VolumeAlreadyAdded
-from backend.base.definitions import (CONTENT_EXTENSIONS, CVFileMapping,
-                                      FileConstants, FilenameData,
-                                      MonitorScheme, SpecialVersion)
+from backend.base.definitions import (CVFileMapping, FileConstants,
+                                      FilenameData, MonitorScheme,
+                                      SpecialVersion)
 from backend.base.file_extraction import extract_filename_data
 from backend.base.files import (change_basefolder, common_folder,
                                 delete_empty_parent_folders,
@@ -74,7 +74,7 @@ def propose_library_import(
 
     try:
         all_files = chain.from_iterable(
-            list_files(f, CONTENT_EXTENSIONS)
+            list_files(f, FileConstants.CONTENT_EXTENSIONS)
             for f in scan_folders
         )
 

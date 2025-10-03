@@ -9,9 +9,8 @@ from os.path import basename, dirname, splitext
 from re import IGNORECASE, Pattern, compile
 from typing import Collection, Dict, Tuple, Union
 
-from backend.base.definitions import (CONTENT_EXTENSIONS, CharConstants,
-                                      FileConstants, FilenameData,
-                                      SpecialVersion)
+from backend.base.definitions import (CharConstants, FileConstants,
+                                      FilenameData, SpecialVersion)
 from backend.base.helpers import (check_overlapping_pos,
                                   fix_year as fix_broken_year,
                                   normalise_number, normalise_string)
@@ -222,7 +221,7 @@ def _translate_filepath(filepath: str) -> str:
 
 def _extensionless_filename(filepath: str) -> str:
     filename = basename(filepath)
-    if splitext(filename)[1].lower() in CONTENT_EXTENSIONS:
+    if splitext(filename)[1].lower() in FileConstants.CONTENT_EXTENSIONS:
         filename = splitext(filename)[0]
     return filename
 

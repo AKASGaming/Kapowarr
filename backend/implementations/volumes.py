@@ -18,12 +18,11 @@ from backend.base.custom_exceptions import (InvalidKeyValue, IssueNotFound,
                                             VolumeAlreadyAdded,
                                             VolumeDownloadedFor,
                                             VolumeNotFound)
-from backend.base.definitions import (SCANNABLE_EXTENSIONS, Constants,
-                                      FileData, GeneralFileData,
-                                      GeneralFileType, IssueData,
-                                      LibraryFilter, LibrarySorting,
-                                      MonitorScheme, SpecialVersion,
-                                      VolumeData)
+from backend.base.definitions import (Constants, FileConstants, FileData,
+                                      GeneralFileData, GeneralFileType,
+                                      IssueData, LibraryFilter,
+                                      LibrarySorting, MonitorScheme,
+                                      SpecialVersion, VolumeData)
 from backend.base.file_extraction import extract_filename_data
 from backend.base.files import (change_basefolder, create_folder,
                                 delete_empty_child_folders,
@@ -335,7 +334,7 @@ class Volume:
             volume_info['root_folder_path']
         )
         del volume_info['root_folder_path']
-        volume_info['issues'] = [i.as_dict() for i in self.get_issues()]
+        volume_info['issues'] = [i.todict() for i in self.get_issues()]
         volume_info['general_files'] = self.get_general_files()
 
         return volume_info
@@ -1309,7 +1308,7 @@ def scan_files(
     general_bindings: List[Tuple[int, str]] = []
     folder_contents = list_files(
         folder=volume_data.folder,
-        ext=SCANNABLE_EXTENSIONS
+        ext=FileConstants.SCANNABLE_EXTENSIONS
     )
     for file in filtered_iter(folder_contents, set(filepath_filter)):
         file_data = extract_filename_data(file)

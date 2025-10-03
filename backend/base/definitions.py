@@ -179,19 +179,20 @@ class FileConstants:
     both without dot-prefix
     """
 
+    CONTENT_EXTENSIONS = (
+        *IMAGE_EXTENSIONS,
+        *CONTAINER_EXTENSIONS
+    )
+    "Media file extensions, both lowercase and uppercase, with dot-prefix"
 
-CONTENT_EXTENSIONS = (
-    *FileConstants.IMAGE_EXTENSIONS,
-    *FileConstants.CONTAINER_EXTENSIONS
-)
-"Media file extensions, both lowercase and uppercase, with dot-prefix"
-
-
-SCANNABLE_EXTENSIONS = (
-    *CONTENT_EXTENSIONS,
-    *FileConstants.METADATA_EXTENSIONS
-)
-"Media and metadata file extensions, both lowercase and uppercase, with dot-prefix"
+    SCANNABLE_EXTENSIONS = (
+        *CONTENT_EXTENSIONS,
+        *METADATA_EXTENSIONS
+    )
+    """
+    Media and metadata file extensions, both lowercase and uppercase,
+    with dot-prefix
+    """
 
 
 class CharConstants:
@@ -302,25 +303,26 @@ class SpecialVersion(BaseEnum):
     "Normal volume, so not a special version"
 
 
-SV_TO_SHORT_TERM: Dict[SpecialVersion, str] = dict((
-    (SpecialVersion.HARD_COVER, "HC"),
-    (SpecialVersion.ONE_SHOT, "OS"),
-    (SpecialVersion.TPB, "TPB"),
-    (SpecialVersion.OMNIBUS, "Omnibus"),
-    (SpecialVersion.COVER, "Cover")
-))
+SV_TO_SHORT_TERM = {
+    SpecialVersion.HARD_COVER: "HC",
+    SpecialVersion.ONE_SHOT: "OS",
+    SpecialVersion.TPB: "TPB",
+    SpecialVersion.OMNIBUS: "Omnibus",
+    SpecialVersion.COVER: "Cover"
+}
 """
 A mapping from a SpecialVersion to a short string representing it.
 E.g. `SpecialVersion.HARD_COVER` -> `HC`
 """
 
-SV_TO_FULL_TERM: Dict[SpecialVersion, str] = dict((
-    (SpecialVersion.HARD_COVER, "Hard-Cover"),
-    (SpecialVersion.ONE_SHOT, "One-Shot"),
-    (SpecialVersion.TPB, "TPB"),
-    (SpecialVersion.OMNIBUS, "Omnibus"),
-    (SpecialVersion.COVER, "Cover")
-))
+
+SV_TO_FULL_TERM = {
+    SpecialVersion.HARD_COVER: "Hard-Cover",
+    SpecialVersion.ONE_SHOT: "One-Shot",
+    SpecialVersion.TPB: "TPB",
+    SpecialVersion.OMNIBUS: "Omnibus",
+    SpecialVersion.COVER: "Cover"
+}
 """
 A mapping from a SpecialVersion to a full string representing it.
 E.g. `SpecialVersion.HARD_COVER` -> `Hard-Cover`
@@ -393,10 +395,12 @@ class SocketEvent(BaseEnum):
 class FailReason(BaseEnum):
     "The reason a download failed to be added to the queue"
 
-    BROKEN = "Webpage unavailable"
-    NO_WORKING_LINKS = "No working download links on page"
+    WEBPAGE_BROKEN = "Webpage unavailable"
+    NO_MATCHES = "No links found on webpage that match to volume and are not blocklisted"
+    NO_WORKING_LINKS = "No working download links found on webpage"
+
+    LINK_BROKEN = "Download broken"
     LIMIT_REACHED = "Download limit reached for service"
-    NO_MATCHES = "No links found that match to volume and are not blocklisted"
 
 
 class GeneralFileType(BaseEnum):
@@ -417,23 +421,20 @@ class GCDownloadSource(BaseEnum):
     "A torrent magnet link directly on the webpage"
 
 
-GC_DOWNLOAD_SOURCE_TERMS: Dict[GCDownloadSource, Tuple[str, ...]] = dict(((
-      GCDownloadSource.MEGA, ("mega", "mega link")),
-     (GCDownloadSource.MEDIAFIRE, ("mediafire", "mediafire link")),
-     (GCDownloadSource.WETRANSFER,
-      ("wetransfer", "we transfer", "wetransfer link", "we transfer link")),
-     (GCDownloadSource.PIXELDRAIN,
-      ("pixeldrain", "pixel drain", "pixeldrain link", "pixel drain link")),
-     (GCDownloadSource.GETCOMICS,
-      ("getcomics", "download now", "main download", "main server", "main link",
-       "mirror download", "mirror server", "mirror link", "link 1", "link 2")),
-     (GCDownloadSource.GETCOMICS_TORRENT,
-      ("getcomics (torrent)", "torrent", "torrent link", "magnet",
-       "magnet link")),))
+# autopep8: off
+GC_DOWNLOAD_SOURCE_TERMS = {
+    GCDownloadSource.MEGA: ("mega", "mega link"),
+    GCDownloadSource.MEDIAFIRE: ("mediafire", "mediafire link"),
+    GCDownloadSource.WETRANSFER: ("wetransfer", "we transfer", "wetransfer link", "we transfer link"),
+    GCDownloadSource.PIXELDRAIN: ("pixeldrain", "pixel drain", "pixeldrain link", "pixel drain link"),
+    GCDownloadSource.GETCOMICS: ("getcomics", "download now", "main download", "main server", "main link", "mirror download", "mirror server", "mirror link", "link 1", "link 2"),
+    GCDownloadSource.GETCOMICS_TORRENT: ("getcomics (torrent)", "torrent", "torrent link", "magnet", "magnet link")
+}
 """
 GCDownloadSource to strings that can be found in the button text for the
 service on the GC page
 """
+# autopep8: on
 
 
 # Future proofing. In the future, there'll be sources like 'torrent' and
@@ -620,7 +621,7 @@ class BlocklistEntry:
     reason: BlocklistReason
     added_at: int
 
-    def as_dict(self) -> Dict[str, Any]:
+    def todict(self) -> Dict[str, Any]:
         result = asdict(self)
         result["reason"] = self.reason.value
         return result
@@ -632,7 +633,7 @@ class RootFolder:
     folder: str
     size: SizeData
 
-    def as_dict(self) -> Dict[str, Any]:
+    def todict(self) -> Dict[str, Any]:
         return asdict(self)
 
 
@@ -673,7 +674,7 @@ class IssueData:
     monitored: bool
     files: List[FileData]
 
-    def as_dict(self) -> Dict[str, Any]:
+    def todict(self) -> Dict[str, Any]:
         return asdict(self)
 
 
@@ -718,7 +719,7 @@ class CredentialData:
             self.api_key = self.api_key.strip() or None
         return
 
-    def as_dict(self) -> Dict[str, Any]:
+    def todict(self) -> Dict[str, Any]:
         "Note: Will replace password with a string of stars"
         result = asdict(self)
 
