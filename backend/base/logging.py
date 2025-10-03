@@ -6,6 +6,7 @@ Setting up, using and altering the logger
 
 import logging
 import logging.config
+from io import StringIO
 from logging.handlers import RotatingFileHandler
 from os.path import exists, isdir, isfile, join
 from typing import Any, Union
@@ -190,6 +191,32 @@ def get_log_filepath() -> str:
         str: The filepath.
     """
     return LOGGING_CONFIG["handlers"]["file"]["filename"]
+
+
+def get_log_file_contents() -> StringIO:
+    """Get all the logs from the log file(s).
+
+    Raises:
+        LogFileNotFound: The log file does not exist.
+
+    Returns:
+        StringIO: The contents of the log file(s).
+    """
+    from backend.base.custom_exceptions import LogFileNotFound
+
+    file = get_log_filepath()
+    if not exists(file):
+        raise LogFileNotFound(file)
+
+    sio = StringIO()
+    for ext in ('.1', ''):
+        lf = file + ext
+        if not exists(lf):
+            continue
+        with open(lf, 'r') as f:
+            sio.writelines(f)
+
+    return sio
 
 
 def set_log_level(

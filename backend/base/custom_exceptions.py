@@ -182,11 +182,13 @@ class FileNotFound(KapowarrException):
 
 
 class LogFileNotFound(KapowarrException):
-    "No log file was found"
+    "The log file was not found"
 
-    def __init__(self) -> None:
+    def __init__(self, log_file: str) -> None:
+        self.log_file = log_file
         LOGGER.warning(
-            "No log file found"
+            "The log file was not found: %s",
+            log_file
         )
         return
 
@@ -195,7 +197,9 @@ class LogFileNotFound(KapowarrException):
         return {
             "code": 404,
             "error": self.__class__.__name__,
-            "result": {}
+            "result": {
+                'log_file': self.log_file
+            }
         }
 
 

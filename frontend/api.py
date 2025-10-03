@@ -2,14 +2,13 @@
 
 from asyncio import run
 from datetime import datetime
-from io import BytesIO, StringIO
-from os.path import exists
+from io import BytesIO
 from typing import Any, Dict, List, Tuple, Type, Union
 
 from flask import Blueprint, request, send_file
 
-from backend.base.custom_exceptions import (InvalidKeyValue, KeyNotFound,
-                                            LogFileNotFound, TaskNotFound)
+from backend.base.custom_exceptions import (InvalidKeyValue,
+                                            KeyNotFound, TaskNotFound)
 from backend.base.definitions import (BlocklistReason,
                                       BlocklistReasonID, CredentialData,
                                       CredentialSource, DownloadSource,
@@ -17,7 +16,7 @@ from backend.base.definitions import (BlocklistReason,
                                       LibrarySorting, MonitorScheme,
                                       SpecialVersion, VolumeData)
 from backend.base.helpers import hash_password
-from backend.base.logging import LOGGER, get_log_filepath
+from backend.base.logging import LOGGER, get_log_file_contents
 from backend.features.download_queue import (DownloadHandler,
                                              delete_download_history,
                                              get_download_history)
@@ -264,17 +263,7 @@ def api_about():
 @error_handler
 @auth
 def api_logs():
-    file = get_log_filepath()
-    if not exists(file):
-        raise LogFileNotFound
-
-    sio = StringIO()
-    for ext in ('.1', ''):
-        lf = file + ext
-        if not exists(lf):
-            continue
-        with open(lf, 'r') as f:
-            sio.writelines(f)
+    sio = get_log_file_contents()
 
     return send_file(
         BytesIO(sio.getvalue().encode('utf-8')),
