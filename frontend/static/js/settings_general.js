@@ -38,7 +38,7 @@ function saveSettings(api_key) {
 			document.querySelector('#cv-input').classList.add('error-input');
 
 		else if (
-			e.error === "InvalidSettingValue"
+			e.error === "InvalidKeyValue"
 			&& e.result.key === "flaresolverr_base_url"
 		)
 			document.querySelector("#flaresolverr-input").classList.add('error-input');

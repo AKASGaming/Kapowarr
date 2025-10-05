@@ -10,7 +10,7 @@ from subprocess import Popen
 from sys import argv
 from typing import NoReturn, Union
 
-from backend.base.custom_exceptions import InvalidSettingValue
+from backend.base.custom_exceptions import InvalidKeyValue
 from backend.base.definitions import Constants, StartType
 from backend.base.helpers import check_min_python_version, get_python_exe
 from backend.base.logging import LOGGER, setup_logging
@@ -85,19 +85,19 @@ def _main(
         if host:
             try:
                 s.update({"host": host})
-            except InvalidSettingValue:
+            except InvalidKeyValue:
                 raise ValueError("Invalid host value")
 
         if port:
             try:
                 s.update({"port": port})
-            except InvalidSettingValue:
+            except InvalidKeyValue:
                 raise ValueError("Invalid port value")
 
         if url_base is not None:
             try:
                 s.update({"url_base": url_base})
-            except InvalidSettingValue:
+            except InvalidKeyValue:
                 raise ValueError("Invalid url base value")
 
         s.restart_on_hosting_changes = True

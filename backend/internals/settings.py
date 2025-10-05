@@ -8,9 +8,9 @@ from os.path import abspath, isdir, join, sep
 from secrets import token_bytes
 from typing import Any, Dict, Mapping
 
-from backend.base.custom_exceptions import (FolderNotFound, InvalidSettingKey,
-                                            InvalidSettingModification,
-                                            InvalidSettingValue)
+from backend.base.custom_exceptions import (FolderNotFound, InvalidKey,
+                                            InvalidKeyValue,
+                                            InvalidSettingModification)
 from backend.base.definitions import (BaseEnum, Constants,
                                       DateType, GCDownloadSource,
                                       SeedingHandling, StartType)
@@ -217,8 +217,8 @@ class Settings(metaclass=Singleton):
             data (Mapping[str, Any]): The keys and their new values.
 
         Raises:
-            InvalidSettingKey: Key is not allowed or unknown.
-            InvalidSettingValue: Value of the key is not allowed.
+            InvalidKey: Key is not allowed or unknown.
+            InvalidKeyValue: Value of the key is not allowed.
             InvalidSettingModification: Key can not be modified this way.
             FolderNotFound: Folder not found.
         """
@@ -281,8 +281,8 @@ class Settings(metaclass=Singleton):
             __value (Any): The new value.
 
         Raises:
-            InvalidSettingKey: Key is not allowed or unknown.
-            InvalidSettingValue: Value of the key is not allowed.
+            InvalidKey: Key is not allowed or unknown.
+            InvalidKeyValue: Value of the key is not allowed.
             InvalidSettingModification: Key can not be modified this way.
             FolderNotFound: Folder not found.
         """
@@ -296,7 +296,7 @@ class Settings(metaclass=Singleton):
             key (str): The key of which to reset the value.
 
         Raises:
-            InvalidSettingKey: The key is not valid or unknown.
+            InvalidKey: The key is not valid or unknown.
         """
         LOGGER.debug(f'Setting reset: {key}')
 
@@ -344,8 +344,8 @@ class Settings(metaclass=Singleton):
             value (Any): Value of setting.
 
         Raises:
-            InvalidSettingKey: Key is invalid or unknown.
-            InvalidSettingValue: Value is not allowed.
+            InvalidKey: Key is invalid or unknown.
+            InvalidKeyValue: Value is not allowed.
             InvalidSettingModification: Key can not be modified this way.
             FolderNotFound: Folder not found.
 
@@ -355,7 +355,7 @@ class Settings(metaclass=Singleton):
         converted_value = value
 
         if key not in SettingsValues.__dataclass_fields__:
-            raise InvalidSettingKey(key)
+            raise InvalidKey(key)
 
         if key == 'api_key':
             raise InvalidSettingModification(key, 'POST /settings/api_key')
@@ -370,10 +370,10 @@ class Settings(metaclass=Singleton):
             try:
                 value = SettingsValues.__dataclass_fields__[key].type(value)
             except ValueError:
-                raise InvalidSettingValue(key, value)
+                raise InvalidKeyValue(key, value)
 
         if not isinstance(value, SettingsValues.__dataclass_fields__[key].type):
-            raise InvalidSettingValue(key, value)
+            raise InvalidKeyValue(key, value)
 
         if key == 'auth_password':
             if value == Constants.PASSWORD_REPLACEMENT:
@@ -386,7 +386,7 @@ class Settings(metaclass=Singleton):
                 )
 
         if key == 'port' and not 0 < value <= 65_535:
-            raise InvalidSettingValue(key, value)
+            raise InvalidKeyValue(key, value)
 
         elif key == 'url_base':
             if value:
@@ -396,7 +396,7 @@ class Settings(metaclass=Singleton):
             from backend.implementations.comicvine import ComicVine
             converted_value = value.strip()
             if converted_value and not ComicVine(converted_value).test_token():
-                raise InvalidSettingValue(key, value)
+                raise InvalidKeyValue(key, value)
 
         elif key == 'download_folder':
             from backend.implementations.root_folders import RootFolders
@@ -413,19 +413,19 @@ class Settings(metaclass=Singleton):
                     folder_is_inside_folder(rf.folder, converted_value)
                     or folder_is_inside_folder(converted_value, rf.folder)
                 ):
-                    raise InvalidSettingValue(key, value)
+                    raise InvalidKeyValue(key, value)
 
         elif key == 'concurrent_direct_downloads' and value <= 0:
-            raise InvalidSettingValue(key, value)
+            raise InvalidKeyValue(key, value)
 
         elif key == 'failing_download_timeout' and value < 0:
-            raise InvalidSettingValue(key, value)
+            raise InvalidKeyValue(key, value)
 
         elif key == 'volume_padding' and not 1 <= value <= 3:
-            raise InvalidSettingValue(key, value)
+            raise InvalidKeyValue(key, value)
 
         elif key == 'issue_padding' and not 1 <= value <= 4:
-            raise InvalidSettingValue(key, value)
+            raise InvalidKeyValue(key, value)
 
         elif key == 'format_preference':
             from backend.implementations.conversion import \
@@ -434,7 +434,7 @@ class Settings(metaclass=Singleton):
             available = FileConversionHandler.get_available_formats()
             for entry in value:
                 if entry not in available:
-                    raise InvalidSettingValue(key, value)
+                    raise InvalidKeyValue(key, value)
 
             converted_value = value
 
@@ -445,10 +445,10 @@ class Settings(metaclass=Singleton):
             ]
             for entry in value:
                 if entry not in available:
-                    raise InvalidSettingValue(key, value)
+                    raise InvalidKeyValue(key, value)
             for entry in available:
                 if entry not in value:
-                    raise InvalidSettingValue(key, value)
+                    raise InvalidKeyValue(key, value)
 
             converted_value = value
 
@@ -463,7 +463,7 @@ class Settings(metaclass=Singleton):
                 converted_value
                 and not FlareSolverr.test_flaresolverr(converted_value)
             ):
-                raise InvalidSettingValue(key, value)
+                raise InvalidKeyValue(key, value)
 
         else:
             from backend.implementations.naming import (NAMING_MAPPING,
@@ -471,6 +471,6 @@ class Settings(metaclass=Singleton):
             if key in NAMING_MAPPING:
                 converted_value = value.strip().strip(sep)
                 if not check_format(converted_value, key):
-                    raise InvalidSettingValue(key, value)
+                    raise InvalidKeyValue(key, value)
 
         return converted_value

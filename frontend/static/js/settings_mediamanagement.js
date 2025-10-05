@@ -74,7 +74,7 @@ function saveSettings(api_key) {
 	.catch(e => {
 		document.querySelector("#save-button p").innerText = 'Failed';
 		e.json().then(e => {
-			if (e.error === 'InvalidSettingValue') {
+			if (e.error === 'InvalidKeyValue') {
 				if (e.result.key === 'volume_folder_naming')
 					inputs.volume_folder_naming_input.classList.add('error-input');
 				else if (e.result.key === 'file_naming')

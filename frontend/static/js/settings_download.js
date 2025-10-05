@@ -29,7 +29,7 @@ function saveSettings(api_key) {
 		document.querySelector("#save-button p").innerText = 'Failed';
         e.json().then(e => {
             if (
-                e.error === "InvalidSettingValue"
+                e.error === "InvalidKeyValue"
                 && e.result.key === "download_folder"
                 ||
                 e.error === "FolderNotFound"
