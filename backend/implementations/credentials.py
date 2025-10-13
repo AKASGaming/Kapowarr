@@ -4,9 +4,8 @@ from typing import Any, Dict, List, Tuple
 
 from typing_extensions import assert_never
 
-from backend.base.custom_exceptions import (ClientNotWorking,
-                                            CredentialInvalid,
-                                            CredentialNotFound)
+from backend.base.custom_exceptions import (CredentialNotFound,
+                                            DownloadLimitReached)
 from backend.base.definitions import CredentialData, CredentialSource
 from backend.base.logging import LOGGER
 from backend.internals.db import get_db
@@ -98,6 +97,7 @@ class Credentials:
             store.
 
         Raises:
+            ClientNotWorking: Can't connect to service.
             CredentialInvalid: The credential data is invalid.
 
         Returns:
@@ -110,16 +110,11 @@ class Credentials:
             from backend.implementations.direct_clients.mega import (
                 MegaAccount, MegaAPIClient)
 
-            try:
-                MegaAccount(
-                    MegaAPIClient(),
-                    credential_data.email or '',
-                    credential_data.password or ''
-                )
-
-            except ClientNotWorking as e:
-                raise CredentialInvalid(e.desc)
-
+            MegaAccount(
+                MegaAPIClient(),
+                credential_data.email or '',
+                credential_data.password or ''
+            )
             credential_data.api_key = None
             credential_data.username = None
 
@@ -128,14 +123,13 @@ class Credentials:
                 PixelDrainDownload
 
             try:
-                result = PixelDrainDownload.login(
+                PixelDrainDownload.login(
                     credential_data.api_key or ''
                 )
-                if result == -1:
-                    raise ClientNotWorking("Failed to login into Pixeldrain")
 
-            except ClientNotWorking as e:
-                raise CredentialInvalid(e.desc)
+            except DownloadLimitReached:
+                # Limit reached but credential is working
+                pass
 
             credential_data.email = None
             credential_data.username = None

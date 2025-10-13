@@ -9,15 +9,17 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple, Type, Union
 
 from typing_extensions import assert_never
 
-from backend.base.custom_exceptions import (DownloadLimitReached,
+from backend.base.custom_exceptions import (ClientNotWorking,
+                                            DownloadLimitReached,
                                             DownloadNotFound,
-                                            DownloadUnmovable, FailedGCPage,
+                                            DownloadUnmovable,
+                                            EnqueuingDownloadFailure,
                                             InvalidKeyValue, IssueNotFound,
                                             LinkBroken)
-from backend.base.definitions import (BlocklistReason, Constants,
-                                      Download, DownloadSource,
-                                      DownloadState, ExternalDownload,
-                                      FailReason, SeedingHandling)
+from backend.base.definitions import (BlocklistReason, Constants, Download,
+                                      DownloadSource, DownloadState,
+                                      EnqueuingDownloadFailureReason,
+                                      ExternalDownload, SeedingHandling)
 from backend.base.files import create_folder, delete_file_folder
 from backend.base.helpers import CommaList, Singleton, get_subclasses
 from backend.base.logging import LOGGER
@@ -375,7 +377,7 @@ class DownloadHandler(metaclass=Singleton):
         volume_id: int,
         issue_id: Union[int, None] = None,
         force_match: bool = False
-    ) -> Tuple[List[dict], Union[FailReason, None]]:
+    ) -> Tuple[List[dict], Union[EnqueuingDownloadFailureReason, None]]:
         """Add a download to the queue.
 
         Args:
@@ -415,7 +417,7 @@ class DownloadHandler(metaclass=Singleton):
             try:
                 await gcp.load_data()
 
-            except FailedGCPage as e:
+            except EnqueuingDownloadFailure as e:
                 add_to_blocklist(
                     web_link=link,
                     web_title=None,
@@ -436,8 +438,8 @@ class DownloadHandler(metaclass=Singleton):
                     volume_id, issue_id, force_match
                 )
 
-            except FailedGCPage as e:
-                if e.reason == FailReason.NO_WORKING_LINKS:
+            except EnqueuingDownloadFailure as e:
+                if e.reason == EnqueuingDownloadFailureReason.NO_WORKING_LINKS:
                     add_to_blocklist(
                         web_link=link,
                         web_title=gcp.title,
@@ -535,7 +537,7 @@ class DownloadHandler(metaclass=Singleton):
                 )
                 dl_instance.id = download['id']
 
-            except LinkBroken as lb:
+            except LinkBroken:
                 # Link is broken
 
                 issue_id = None
@@ -553,7 +555,7 @@ class DownloadHandler(metaclass=Singleton):
                     source=DownloadSource(download['source']),
                     volume_id=download['volume_id'],
                     issue_id=issue_id,
-                    reason=lb.reason
+                    reason=BlocklistReason.LINK_BROKEN
                 )
                 cursor.execute(
                     "DELETE FROM download_queue WHERE id = ?;",
@@ -561,7 +563,7 @@ class DownloadHandler(metaclass=Singleton):
                 )
                 continue
 
-            except (DownloadLimitReached, IssueNotFound):
+            except (DownloadLimitReached, IssueNotFound, ClientNotWorking):
                 cursor.execute(
                     "DELETE FROM download_queue WHERE id = ?;",
                     (download['id'],)

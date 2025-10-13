@@ -362,7 +362,11 @@ function addCredential() {
 		.catch(e => {
 			if (e.status === 400)
 				e.json().then(json => {
-					document.querySelector('#builtin-window p.error').innerText = json.result.description;
+					if (json.error === "CredentialInvalid") {
+						document.querySelector('#builtin-window p.error').innerText = "Invalid credentials";
+					} else {
+						document.querySelector('#builtin-window p.error').innerText = json.result.reason_text;
+					}
 					hide([], [document.querySelector('#builtin-window p.error')]);
 				});
 			else

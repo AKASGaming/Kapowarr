@@ -6,8 +6,9 @@ from typing import Any, Dict, List, Union
 
 from requests.exceptions import RequestException
 
-from backend.base.custom_exceptions import ExternalClientNotWorking
-from backend.base.definitions import Constants, DownloadState, DownloadType
+from backend.base.custom_exceptions import ClientNotWorking, CredentialInvalid
+from backend.base.definitions import (BrokenClientReason, Constants,
+                                      DownloadState, DownloadType)
 from backend.base.helpers import Session
 from backend.base.logging import LOGGER
 from backend.implementations.external_clients import BaseExternalClient
@@ -54,8 +55,21 @@ class qBittorrent(BaseExternalClient):
         base_url: str,
         username: Union[str, None],
         password: Union[str, None]
-    ) -> Union[Session, str]:
+    ) -> Session:
+        """Login into qBittorrent client.
 
+        Args:
+            base_url (str): Base URL of instance.
+            username (Union[str, None]): Username to access client, if set.
+            password (Union[str, None]): Password to access client, if set.
+
+        Raises:
+            ClientNotWorking: Can't connect to client.
+            CredentialInvalid: Credentials are invalid.
+
+        Returns:
+            Session: Request session that is logged in.
+        """
         ssn = Session()
         if username and password:
             params = {
@@ -73,19 +87,20 @@ class qBittorrent(BaseExternalClient):
 
         except RequestException:
             LOGGER.exception("Can't connect to qBittorrent instance: ")
-            return "Can't connect; invalid base URL"
+            raise ClientNotWorking(BrokenClientReason.CONNECTION_ERROR)
 
         if auth_request.status_code == 404:
             LOGGER.error(
                 f"Can't connect or version too low of qBittorrent instance: {auth_request.text}"
             )
-            return "Invalid base URL or version too low; at least v4.1"
+            # Should be at least v4.1
+            raise ClientNotWorking(BrokenClientReason.VERSION_NOT_SUPPORTED)
 
         if not auth_request.ok:
             LOGGER.error(
                 f"Not connected to qBittorrent instance: {auth_request.text}"
             )
-            return "Invalid instance; not Qbittorrent"
+            raise ClientNotWorking(BrokenClientReason.NOT_CLIENT_INSTANCE)
 
         auth_success = auth_request.headers.get('set-cookie') is not None
 
@@ -93,7 +108,7 @@ class qBittorrent(BaseExternalClient):
             LOGGER.error(
                 f"Failed to authenticate for qBittorrent instance: {auth_request.text}"
             )
-            return "Can't authenticate"
+            raise CredentialInvalid
 
         return ssn
 
@@ -115,10 +130,7 @@ class qBittorrent(BaseExternalClient):
         }
 
         if not self.ssn:
-            result = self._login(self.base_url, self.username, self.password)
-            if isinstance(result, str):
-                raise ExternalClientNotWorking(result)
-            self.ssn = result
+            self.ssn = self._login(self.base_url, self.username, self.password)
 
         self.ssn.post(
             f'{self.base_url}/api/v2/torrents/add',
@@ -130,10 +142,7 @@ class qBittorrent(BaseExternalClient):
 
     def get_download(self, download_id: str) -> Union[dict, None]:
         if not self.ssn:
-            result = self._login(self.base_url, self.username, self.password)
-            if isinstance(result, str):
-                raise ExternalClientNotWorking(result)
-            self.ssn = result
+            self.ssn = self._login(self.base_url, self.username, self.password)
 
         r: List[Dict[str, Any]] = self.ssn.get(
             f'{self.base_url}/api/v2/torrents/info',
@@ -176,10 +185,7 @@ class qBittorrent(BaseExternalClient):
 
     def delete_download(self, download_id: str, delete_files: bool) -> None:
         if not self.ssn:
-            result = self._login(self.base_url, self.username, self.password)
-            if isinstance(result, str):
-                raise ExternalClientNotWorking(result)
-            self.ssn = result
+            self.ssn = self._login(self.base_url, self.username, self.password)
 
         self.ssn.post(
             f'{self.base_url}/api/v2/torrents/delete',
@@ -197,13 +203,10 @@ class qBittorrent(BaseExternalClient):
         username: Union[str, None] = None,
         password: Union[str, None] = None,
         api_token: Union[str, None] = None
-    ) -> Union[str, None]:
-        result = qBittorrent._login(
+    ) -> None:
+        qBittorrent._login(
             base_url,
             username,
             password
         )
-
-        if isinstance(result, str):
-            return result
-        return None
+        return

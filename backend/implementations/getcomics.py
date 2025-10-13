@@ -14,11 +14,13 @@ from aiohttp import ClientError
 from bencoding import bencode
 from bs4 import BeautifulSoup, Tag
 
-from backend.base.custom_exceptions import (DownloadLimitReached, FailedGCPage,
+from backend.base.custom_exceptions import (DownloadLimitReached,
+                                            EnqueuingDownloadFailure,
                                             IssueNotFound, LinkBroken)
 from backend.base.definitions import (GC_DOWNLOAD_SOURCE_TERMS,
-                                      BlocklistReason, Constants,
-                                      Download, DownloadGroup, FailReason,
+                                      BlocklistReason, Constants, Download,
+                                      DownloadGroup,
+                                      EnqueuingDownloadFailureReason,
                                       GCDownloadSource, SearchResultData,
                                       SpecialVersion)
 from backend.base.file_extraction import extract_filename_data
@@ -137,6 +139,9 @@ def __check_download_link(
     """
     LOGGER.debug(f'Checking download link: {link}, {link_text}')
     if not link:
+        return
+
+    if not link.startswith(('http', 'magnet:?')):
         return
 
     # Check if link is in blocklist
@@ -538,13 +543,10 @@ async def __purify_link(
         # Direct magnet link
         return link, TorrentDownload
 
-    if not link.startswith("http"):
-        raise LinkBroken(BlocklistReason.SOURCE_NOT_SUPPORTED)
-
     async with AsyncSession() as session:
         r = await session.get(link)
     if not r.ok:
-        raise LinkBroken(BlocklistReason.LINK_BROKEN)
+        raise LinkBroken(link)
     url = str(r.real_url)
     content_type = r.headers.getone("Content-Type", "")
 
@@ -559,7 +561,7 @@ async def __purify_link(
     elif source == GCDownloadSource.MEDIAFIRE:
         if 'error.php' in url:
             # Link is broken
-            raise LinkBroken(BlocklistReason.LINK_BROKEN)
+            raise LinkBroken(link)
 
         elif '/folder/' in url:
             # Folder download
@@ -637,8 +639,8 @@ async def __purify_download_group(
             try:
                 pure_link, DownloadClass = await __purify_link(source, link)
 
-            except LinkBroken as lb:
-                # Link broken, source not supported
+            except LinkBroken:
+                # Link broken
                 add_to_blocklist(
                     web_link=web_link,
                     web_title=web_title,
@@ -647,7 +649,7 @@ async def __purify_download_group(
                     source=source,
                     volume_id=volume_id,
                     issue_id=issue_id,
-                    reason=lb.reason
+                    reason=BlocklistReason.LINK_BROKEN
                 )
                 continue
 
@@ -668,8 +670,8 @@ async def __purify_download_group(
                     forced_match=forced_match
                 )
 
-            except LinkBroken as lb:
-                # DL limit reached, link broken
+            except LinkBroken:
+                # Link broken
                 add_to_blocklist(
                     web_link=web_link,
                     web_title=web_title,
@@ -678,7 +680,7 @@ async def __purify_download_group(
                     source=source,
                     volume_id=volume_id,
                     issue_id=issue_id,
-                    reason=lb.reason
+                    reason=BlocklistReason.LINK_BROKEN
                 )
 
             except IssueNotFound:
@@ -718,20 +720,16 @@ async def _test_paths(
         volume_id (int): The ID of the volume that the download is for.
 
         issue_id (Union[int, None], optional): The ID of the issue that the
-        download is for.
+            download is for.
             Defaults to None.
 
         forced_match (bool, optional): Don't rename the downloaded files,
-        even if the setting for it is enabled.
+            even if the setting for it is enabled.
             Defaults to False.
 
     Raises:
-        FailedGCPage: With `.reason = FailReason.NO_WORKING_LINKS`, it means
-        not a single working link was found on the page.
-
-        FailedGCPage: With `.reason = FailReason.LIMIT_REACHED`, it means
-        not a single working link was found, but part of the links didn't work
-        because the limit of the service was reached (which will go away).
+        EnqueuingDownloadFailure: Failed to extract downloads because no links
+            were working or they're all rate limited.
 
     Returns:
         List[Download]: A list of downloads.
@@ -760,9 +758,13 @@ async def _test_paths(
 
     # Nothing worked
     if any(limit_reached):
-        raise FailedGCPage(FailReason.LIMIT_REACHED)
+        raise EnqueuingDownloadFailure(
+            EnqueuingDownloadFailureReason.ONLY_RATE_LIMITED_LINKS
+        )
     else:
-        raise FailedGCPage(FailReason.NO_WORKING_LINKS)
+        raise EnqueuingDownloadFailure(
+            EnqueuingDownloadFailureReason.NO_WORKING_LINKS
+        )
 
 
 # region Searching
@@ -857,7 +859,7 @@ class GetComicsPage:
         downloads from the page.
 
         Raises:
-            FailedGCPage: Failed to fetch the GC page.
+            EnqueuingDownloadFailure: Failed to fetch the webpage.
         """
         LOGGER.debug(f"Extracting download links from {self.link}")
 
@@ -870,7 +872,9 @@ class GetComicsPage:
                 soup = BeautifulSoup(await response.text(), 'html.parser')
 
             except ClientError:
-                raise FailedGCPage(FailReason.WEBPAGE_BROKEN)
+                raise EnqueuingDownloadFailure(
+                    EnqueuingDownloadFailureReason.WEBPAGE_BROKEN
+                )
 
         self.title = _get_title(soup)
         self.download_groups = _get_download_groups(soup)
@@ -898,8 +902,8 @@ class GetComicsPage:
                 Defaults to False.
 
         Raises:
-            FailedGCPage: Something went wrong with creating the downloads.
-            See the `reason` attr of the exception.
+            EnqueuingDownloadFailure: Failed to extract working, matching,
+                supported downloads from the webpage.
 
         Returns:
             List[Download]: The list of downloads coming from the GC page, for
@@ -912,7 +916,9 @@ class GetComicsPage:
         )
 
         if not link_paths:
-            raise FailedGCPage(FailReason.NO_MATCHES)
+            raise EnqueuingDownloadFailure(
+                EnqueuingDownloadFailureReason.NO_MATCHES
+            )
 
         result = await _test_paths(
             link_paths,

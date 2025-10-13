@@ -3,9 +3,10 @@
 from sqlite3 import IntegrityError
 from typing import Any, Dict, List, Mapping, Type, Union
 
-from backend.base.custom_exceptions import (ClientDownloading,
+from backend.base.custom_exceptions import (ClientNotWorking,
+                                            CredentialInvalid,
+                                            ExternalClientDownloading,
                                             ExternalClientNotFound,
-                                            ExternalClientNotWorking,
                                             InvalidKeyValue, KeyNotFound)
 from backend.base.definitions import (ClientTestResult, DownloadType,
                                       ExternalDownloadClient)
@@ -82,7 +83,7 @@ class BaseExternalClient(ExternalDownloadClient):
             "SELECT 1 FROM download_queue WHERE external_client_id = ? LIMIT 1;",
             (self.id,)
         ).fetchone() is not None:
-            raise ClientDownloading(self.id)
+            raise ExternalClientDownloading(self.id)
 
         filtered_data: Dict[str, Any] = {}
         for key in ('title', 'base_url', 'username', 'password', 'api_token'):
@@ -108,14 +109,13 @@ class BaseExternalClient(ExternalDownloadClient):
             # Username given but not password
             raise InvalidKeyValue('password', filtered_data['password'])
 
-        fail_reason = self.test(
+        # Raises exception on fail
+        self.test(
             filtered_data['base_url'],
             filtered_data['username'],
             filtered_data['password'],
             filtered_data['api_token']
         )
-        if fail_reason:
-            raise ExternalClientNotWorking(fail_reason)
 
         cursor.execute("""
             UPDATE external_download_clients
@@ -148,7 +148,7 @@ class BaseExternalClient(ExternalDownloadClient):
             )
 
         except IntegrityError:
-            raise ClientDownloading(self._id)
+            raise ExternalClientDownloading(self._id)
 
         return
 
@@ -205,19 +205,35 @@ class ExternalClients:
             ClientTestResult: Whether the test was successful.
         """
         client_types = ExternalClients.get_client_types()
-        if client_type not in client_types:
+
+        try:
+            client_types[client_type].test(
+                normalise_base_url(base_url),
+                username,
+                password,
+                api_token
+            )
+
+        except KeyError:
             raise InvalidKeyValue('type', client_type)
 
-        fail_reason = client_types[client_type].test(
-            normalise_base_url(base_url),
-            username,
-            password,
-            api_token
-        )
-        return ClientTestResult({
-            'success': fail_reason is None,
-            'description': fail_reason
-        })
+        except ClientNotWorking as e:
+            return ClientTestResult({
+                'success': False,
+                'description': e.reason_text
+            })
+
+        except CredentialInvalid:
+            return ClientTestResult({
+                'success': False,
+                'description': 'Failed to login with the given credentials'
+            })
+
+        else:
+            return ClientTestResult({
+                'success': True,
+                'description': None
+            })
 
     @staticmethod
     def add(
@@ -252,7 +268,8 @@ class ExternalClients:
 
         Raises:
             InvalidKeyValue: One of the parameters has an invalid argument.
-            ExternalClientNotWorking: Failed to connect to the client.
+            ClientNotWorking: Can't connect to client.
+            CredentialInvalid: Credentials are invalid.
 
         Returns:
             ExternalDownloadClient: The new client.
@@ -266,17 +283,17 @@ class ExternalClients:
         if username is not None and password is None:
             raise InvalidKeyValue('password', password)
 
-        test_result = ExternalClients.test(
-            client_type,
-            base_url,
+        try:
+            ClientClass = ExternalClients.get_client_types()[client_type]
+        except KeyError:
+            raise InvalidKeyValue('type', client_type)
+
+        ExternalClients.get_client_types()[client_type].test(
+            normalise_base_url(base_url),
             username,
             password,
             api_token
         )
-        if not test_result['success']:
-            raise ExternalClientNotWorking(test_result['description'])
-
-        ClientClass = ExternalClients.get_client_types()[client_type]
 
         data = {
             'download_type': ClientClass.download_type.value,

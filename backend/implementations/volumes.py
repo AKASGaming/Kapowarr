@@ -13,7 +13,8 @@ from typing import Any, Dict, List, Mapping, Set, Tuple, Union
 
 from typing_extensions import assert_never
 
-from backend.base.custom_exceptions import (InvalidKeyValue, IssueNotFound,
+from backend.base.custom_exceptions import (InvalidKey, InvalidKeyValue,
+                                            IssueNotFound,
                                             TaskForVolumeRunning,
                                             VolumeAlreadyAdded,
                                             VolumeDownloadedFor,
@@ -179,13 +180,13 @@ class Issue:
             data (Mapping[str, Any]): The keys and their new values.
 
         Raises:
-            KeyError: Key is not allowed.
+            InvalidKey: Key is not allowed.
             InvalidKeyValue: Value of key is not allowed.
         """
         formatted_data = {}
         for key, value in data.items():
             if key != 'monitored':
-                raise KeyError
+                raise InvalidKey(key)
             formatted_data[key] = self.__format_value(key, value)
 
         cursor = get_db()
@@ -520,7 +521,7 @@ class Volume:
 
         for key in data:
             if key not in allowed_keys:
-                raise KeyError
+                raise InvalidKey(key)
 
         cursor = get_db()
         for key, value in data.items():
@@ -539,7 +540,7 @@ class Volume:
             __value (Any): The new value of the aspect.
 
         Raises:
-            KeyError: Key is not allowed.
+            InvalidKey: Key is not allowed.
             InvalidKeyValue: Value of key is not allowed.
         """
         self.update({__name: __value})

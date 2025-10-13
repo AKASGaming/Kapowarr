@@ -16,8 +16,9 @@ from requests.exceptions import (JSONDecodeError as RequestsJSONDecodeError,
 from urllib3.exceptions import ProtocolError, TimeoutError
 
 from backend.base.custom_exceptions import (ClientNotWorking,
+                                            CredentialInvalid,
                                             DownloadLimitReached, LinkBroken)
-from backend.base.definitions import (BaseEnum, BlocklistReason, Constants,
+from backend.base.definitions import (BaseEnum, BrokenClientReason, Constants,
                                       CredentialData, CredentialSource,
                                       DownloadSource)
 from backend.base.helpers import Session
@@ -313,6 +314,19 @@ class MegaAccount:
         username: Union[str, None] = None,
         password: Union[str, None] = None
     ) -> None:
+        """Login and represent a registered or anonymous Mega account.
+
+        Args:
+            client (MegaAPIClient): The client to use for the requests.
+            username (Union[str, None], optional): The username of the account,
+                when logging in with one. Defaults to None.
+            password (Union[str, None], optional): The password of the account,
+                when logging in with one. Defaults to None.
+
+        Raises:
+            ClientNotWorking: Failed to contact Mega.
+            CredentialInvalid: Couldn't log in with the given credentials.
+        """
         self.client = client
 
         try:
@@ -320,8 +334,9 @@ class MegaAccount:
                 self.client.sid = self._login_user(username, password)
             else:
                 self.client.sid = self._login_anonymous()
+
         except (RequestsJSONDecodeError, RetryError):
-            raise ClientNotWorking("Failed to login into Mega")
+            raise ClientNotWorking(BrokenClientReason.CONNECTION_ERROR)
 
         return
 
@@ -383,7 +398,7 @@ class MegaAccount:
         )
         if isinstance(res, int) or 'e' in res:
             raise ClientNotWorking(
-                "An unexpected error occured when making contact with Mega"
+                BrokenClientReason.FAILED_PROCESSING_RESPONSE
             )
 
         if res["v"] == 1: # v1 account
@@ -406,9 +421,7 @@ class MegaAccount:
             ).replace("=", "")
 
         else:
-            raise ClientNotWorking(
-                f"Mega account version not supported: {res['v']}"
-            )
+            raise ClientNotWorking(BrokenClientReason.VERSION_NOT_SUPPORTED)
 
         return self._process_login(
             user=user,
@@ -439,7 +452,7 @@ class MegaAccount:
         ) # type: ignore
         if isinstance(res, int):
             raise ClientNotWorking(
-                "An unexpected error occured when making contact with Mega"
+                BrokenClientReason.FAILED_PROCESSING_RESPONSE
             )
 
         return self._process_login(
@@ -469,7 +482,7 @@ class MegaAccount:
 
         if isinstance(res, int) or 'e' in res:
             raise ClientNotWorking(
-                "An unexpected error occured when making contact with Mega"
+                BrokenClientReason.FAILED_PROCESSING_RESPONSE
             )
 
         self.master_key = master_key = MegaCrypto.decrypt_key(
@@ -498,17 +511,12 @@ class MegaAccount:
             for i in range(4):
                 l = ((privk[0] * 256 + privk[1] + 7) // 8) + 2
                 if l > len(privk):
-                    raise ClientNotWorking(
-                        "Failed to login into Mega"
-                    )
+                    raise CredentialInvalid
                 rsa_private_key[i] = self.__mpi_to_int(privk[:l])
                 privk = privk[l:]
 
             if len(privk) >= 16:
-                raise ClientNotWorking(
-                    "Failed to login into Mega"
-                )
-
+                raise CredentialInvalid
             encrypted_sid = self.__mpi_to_int(
                 MegaCrypto.base64_decode(res["csid"])
             )
@@ -530,9 +538,7 @@ class MegaAccount:
             ).replace("=", "")
             return sid
 
-        raise ClientNotWorking(
-            "Failed to login into Mega"
-        )
+        raise CredentialInvalid
 
 
 class MegaABC(ABC):
@@ -593,9 +599,7 @@ class Mega(MegaABC):
                 raise JSONDecodeError('', '', -1)
 
         except (JSONDecodeError, RetryError):
-            raise ClientNotWorking(
-                "The Mega download link is not found, does not exist anymore or is broken"
-            )
+            raise LinkBroken(download_link)
 
         if res.get('tl', 0): # tl = time left
             # Download limit reached
@@ -603,7 +607,9 @@ class Mega(MegaABC):
 
         attr = MegaCrypto.decrypt_attr(res["at"], self.__master_key)
         if not attr:
-            raise ClientNotWorking("Decryption of Mega attributes failed")
+            raise ClientNotWorking(
+                BrokenClientReason.FAILED_PROCESSING_RESPONSE
+            )
 
         self.mega_filename = attr['n']
         self.size = res["s"]
@@ -641,10 +647,8 @@ class Mega(MegaABC):
                     mega_cred.password
                 )
 
-            except ClientNotWorking:
-                LOGGER.error(
-                    'Login credentials for mega are invalid. Login failed.'
-                )
+            except CredentialInvalid:
+                continue
 
             else:
                 cred.auth_tokens.setdefault(CredentialSource.MEGA, {})[
@@ -654,7 +658,7 @@ class Mega(MegaABC):
 
         else:
             # Failed to login with creds or anonymous
-            raise ClientNotWorking("Unable to login in any way")
+            raise ClientNotWorking(BrokenClientReason.ACCESS_DENIED)
 
         return
 
@@ -662,14 +666,14 @@ class Mega(MegaABC):
     def _parse_url(download_link: str) -> Tuple[str, str]:
         regex_search = mega_url_regex.search(download_link)
         if not regex_search:
-            raise LinkBroken(BlocklistReason.LINK_BROKEN)
+            raise LinkBroken(download_link)
 
         groups = regex_search.groupdict()
         id = groups["ID1"] or groups["ID2"] or groups["ID3"]
         key = groups["K1"] or groups["K2"] or groups["K3"]
 
         if not (id and key):
-            raise LinkBroken(BlocklistReason.LINK_BROKEN)
+            raise LinkBroken(download_link)
 
         return id, key
 
@@ -747,14 +751,13 @@ class Mega(MegaABC):
                         break
             else:
                 # Failed to download file
-                raise ClientNotWorking(
-                    "The Mega download could not be downloaded, "
-                    "because of a connection error"
-                )
+                raise ClientNotWorking(BrokenClientReason.CONNECTION_ERROR)
 
         if self.downloading:
             if cbc_mac.digest() != meta_mac:
-                raise ValueError("Mismatched mac")
+                raise ClientNotWorking(
+                    BrokenClientReason.FAILED_PROCESSING_RESPONSE
+                )
 
         self.__r = None
 
@@ -804,9 +807,7 @@ class MegaFolder(MegaABC):
                 raise JSONDecodeError('', '', -1)
 
         except (JSONDecodeError, RetryError):
-            raise ClientNotWorking(
-                "The Mega Folder download link is not found, does not exist anymore or is broken"
-            )
+            raise LinkBroken(download_link)
 
         self.files: List[Dict[str, Any]] = []
         self.mega_filename = ""
@@ -839,14 +840,14 @@ class MegaFolder(MegaABC):
     def _parse_url(folder_link: str) -> Tuple[str, str]:
         regex_search = mega_folder_regex.search(folder_link)
         if not regex_search:
-            raise LinkBroken(BlocklistReason.LINK_BROKEN)
+            raise LinkBroken(folder_link)
 
         groups = regex_search.groupdict()
         id = groups["ID"]
         key = groups["KEY"]
 
         if not (id and key):
-            raise LinkBroken(BlocklistReason.LINK_BROKEN)
+            raise LinkBroken(folder_link)
 
         return id, key
 
@@ -888,9 +889,7 @@ class MegaFolder(MegaABC):
                         raise JSONDecodeError('', '', -1)
 
                 except (JSONDecodeError, RetryError):
-                    raise ClientNotWorking(
-                        "The Mega download link is not found, does not exist anymore or is broken"
-                    )
+                    raise LinkBroken(self.download_link)
 
                 if res.get('tl', 0): # tl = time left
                     # Download limit reached
@@ -959,13 +958,14 @@ class MegaFolder(MegaABC):
                     else:
                         # Failed to download file
                         raise ClientNotWorking(
-                            "The Mega download could not be downloaded, "
-                            "because of a connection error"
+                            BrokenClientReason.CONNECTION_ERROR
                         )
 
                 if self.downloading:
                     if cbc_mac.digest() != meta_mac:
-                        raise ValueError("Mismatched mac")
+                        raise ClientNotWorking(
+                            BrokenClientReason.FAILED_PROCESSING_RESPONSE
+                        )
                 else:
                     break
 
