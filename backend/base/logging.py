@@ -111,6 +111,7 @@ LOGGING_CONFIG = {
 def setup_logging(
     log_folder: Union[str, None],
     log_file: Union[str, None],
+    log_level: Union[int, None] = None,
     do_rollover: bool = True
 ) -> None:
     """Setup the basic config of the logging module.
@@ -123,6 +124,10 @@ def setup_logging(
         log_file (Union[str, None]): The filename of the log file.
             If `None`, the default filename will be used.  It will be created if
             it doesn't exist yet.
+
+        log_level (Union[int, None], optional): The log level to set the logger
+            to. If `None`, the default level will be used.
+            Defaults to None.
 
         do_rollover (bool, optional): Whether to allow the log file to rollover
             when it reaches the maximum size.
@@ -180,6 +185,9 @@ def setup_logging(
 
     sys.excepthook = log_uncaught_exceptions
     threading.excepthook = log_uncaught_threading_exceptions
+
+    if log_level is not None:
+        set_log_level(log_level)
 
     return
 
