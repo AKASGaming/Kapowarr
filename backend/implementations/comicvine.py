@@ -18,8 +18,8 @@ from backend.base.custom_exceptions import (CVRateLimitReached,
                                             VolumeNotMatched)
 from backend.base.definitions import (Constants, FilenameData, IssueMetadata,
                                       SpecialVersion, T, VolumeMetadata)
-from backend.base.file_extraction import (process_issue_number,
-                                          process_volume_number, volume_regex)
+from backend.base.file_extraction import (extract_issue_number,
+                                          extract_volume_number, volume_regex)
 from backend.base.helpers import (AsyncSession, DictKeyedDict, Session,
                                   batched, force_range, force_suffix,
                                   normalise_string, normalise_year,
@@ -318,7 +318,7 @@ class ComicVine:
 
         volume_result = volume_regex.search(volume_data['deck'] or '')
         if volume_result:
-            result['volume_number'] = force_range(process_volume_number(
+            result['volume_number'] = force_range(extract_volume_number(
                 volume_result.group(1)
             ))[0] or 1
 
@@ -337,7 +337,7 @@ class ComicVine:
         Returns:
             VolumeMetadata: The formatted version.
         """
-        cin = force_range(process_issue_number(
+        cin = force_range(extract_issue_number(
             issue_data['issue_number']
         ))[0]
 

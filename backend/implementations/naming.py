@@ -18,8 +18,8 @@ from backend.base.definitions import (SV_TO_FULL_TERM, SV_TO_SHORT_TERM,
                                       IssueData, IssueNamingKeys,
                                       SpecialVersion, SVNamingKeys, VolumeData)
 from backend.base.file_extraction import (cover_regex, extract_filename_data,
-                                          page_regex, page_regex_2,
-                                          process_issue_number)
+                                          extract_issue_number, page_regex,
+                                          page_regex_2)
 from backend.base.files import (clean_filepath_simple, clean_filepath_smartly,
                                 clean_filestring_simple,
                                 clean_filestring_smartly,
@@ -480,7 +480,7 @@ def check_mock_filename(
                         comicvine_id=456,
                         issue_number="1",
                         calculated_issue_number=force_range(
-                            process_issue_number("1") or 0.0
+                            extract_issue_number("1") or 0.0
                         )[0],
                         title="One Shot",
                         date="2023-03-04",
@@ -517,7 +517,7 @@ def check_mock_filename(
                         comicvine_id=456,
                         issue_number="1",
                         calculated_issue_number=force_range(
-                            process_issue_number("1") or 0.0
+                            extract_issue_number("1") or 0.0
                         )[0],
                         title="",
                         date="2023-03-04",
@@ -556,7 +556,7 @@ def check_mock_filename(
                         comicvine_id=456,
                         issue_number="3b",
                         calculated_issue_number=force_range(
-                            process_issue_number("3b") or 0.0
+                            extract_issue_number("3b") or 0.0
                         )[0],
                         title="",
                         date="2023-03-04",
@@ -595,7 +595,7 @@ def check_mock_filename(
                         comicvine_id=456,
                         issue_number="8",
                         calculated_issue_number=force_range(
-                            process_issue_number("8") or 0.0
+                            extract_issue_number("8") or 0.0
                         )[0],
                         title="",
                         date="2023-03-04",
